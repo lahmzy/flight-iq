@@ -1,0 +1,78 @@
+model User {
+  id          String               @id @default(uuid())
+  email       String               @unique
+  first_name  String?
+  last_name   String?
+  password    String?
+  auth_method AuthenticationMethod
+  role        UserRole             @default(user)
+
+  mail_verified_at           DateTime?
+  account_setup_completed_at DateTime?
+
+  status               AccountStatus     @default(active)
+  suspended_at         DateTime?
+  reason_for_suspenion String?
+  logs                 UserActivityLog[]
+  Session              Session[]
+  Device               Device[]
+  otp                  otp[]
+}
+
+model UserActivityLog {
+  id           String      @id @default(uuid())
+  User         User        @relation(fields: [user_id], references: [id])
+  user_id      String
+  activity_log String
+  severity     LogSeverity @default(low)
+
+  created_at DateTime @default(now())
+}
+
+model Session {
+  id            String   @id @default(uuid())
+  User          User     @relation(fields: [user_id], references: [id])
+  user_id       String
+  device        Device?  @relation(fields: [device_id], references: [id])
+  device_id     String
+  refresh_token String
+  expires_at    DateTime
+  ip_address    String?
+  updated_at    DateTime @updatedAt
+  created_at    DateTime @default(now())
+}
+
+model Device {
+  id           String    @id @default(uuid())
+  User         User      @relation(fields: [user_id], references: [id])
+  user_id      String
+  device_name  String
+  finger_print String
+  type         String
+  brand        String
+  Session      Session[]
+  created_at   DateTime  @default(now())
+}
+
+enum LogSeverity {
+  low
+  moderate
+  high
+  emergency
+}
+
+enum AccountStatus {
+  active
+  banned
+  suspended
+}
+
+enum AuthenticationMethod {
+  credentials
+  google
+}
+
+enum UserRole {
+  user
+  admin
+}

@@ -1,0 +1,15 @@
+model otp {
+  id           String                   @id @default(uuid())
+  created_at   DateTime                 @default(now())
+  expired_at   DateTime
+  User         User                     @relation(fields: [user_id], references: [id])
+  user_id      String
+  finger_print String?
+  code         String
+  type         VerificationCodeCategory
+}
+
+enum VerificationCodeCategory {
+  email_verification
+  forgot_password_verification
+}

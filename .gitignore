@@ -1,0 +1,48 @@
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editors / IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+logs/
+
+# --- Env files (never commit secrets at the monorepo level) ---
+.env
+.env.local
+.env.*.local
+*.env
+
+# --- Node / pnpm / yarn (per-app) ---
+node_modules/
+.pnpm-store/
+
+# --- Build outputs (per-app) ---
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# --- Coverage / test artifacts ---
+coverage/
+.nyc_output/
+
+# --- OS noise ---
+.DS_Store
+._*
+
+# --- Submodules ---
+# When you add a submodule, git records the pinned commit in the
+# .gitmodules file. The actual submodule working tree is ignored
+# at the parent level (it's tracked inside the submodule's own repo).

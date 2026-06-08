@@ -1,0 +1,245 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Prewrite — Your verification code</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* Reset */
+    body,
+    table,
+    td,
+    a {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    table,
+    td {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+
+    img {
+      -ms-interpolation-mode: bicubic;
+    }
+
+    img {
+      border: 0;
+      height: auto;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+    }
+
+    table {
+      border-collapse: collapse !important;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: #f6f9f6;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    /* Container */
+    .email-wrapper {
+      width: 100%;
+      background-color: #f6f9f6;
+      padding: 24px 0;
+    }
+
+    .email-content {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Header */
+    .email-header {
+      background-color: #ffffff;
+      padding: 24px;
+      text-align: left;
+      border-bottom: 1px solid #eef5ee;
+    }
+
+    .brand {
+      font-weight: 700;
+      color: #10b981;
+      font-size: 22px;
+      letter-spacing: 0.4px;
+    }
+
+    /* Body */
+    .email-body {
+      padding: 28px;
+      color: #1f2937;
+    }
+
+    .greeting {
+      font-size: 18px;
+      margin: 0 0 8px 0;
+    }
+
+    .lead {
+      margin: 0 0 18px 0;
+      color: #374151;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* OTP box */
+    .otp-card {
+      background-color: #f0fbf6;
+      border: 1px solid #dff5e9;
+      padding: 20px;
+      text-align: center;
+      border-radius: 8px;
+      margin: 18px 0;
+    }
+
+    .otp-code {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      color: #065f46;
+      margin: 0;
+    }
+
+    .otp-help {
+      font-size: 13px;
+      color: #4b5563;
+      margin-top: 8px;
+    }
+
+    /* Button */
+    .btn {
+      display: inline-block;
+      padding: 12px 22px;
+      background-color: #10b981;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .muted {
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    /* Footer */
+    .email-footer {
+      padding: 20px 28px;
+      background-color: #ffffff;
+      border-top: 1px solid #eef5ee;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    /* Responsive */
+    @media only screen and (max-width:480px) {
+      .email-body {
+        padding: 20px;
+      }
+
+      .email-header {
+        padding: 18px;
+      }
+
+      .otp-code {
+        font-size: 28px;
+        letter-spacing: 4px;
+      }
+
+      .btn {
+        padding: 12px 16px;
+        font-size: 15px;
+      }
+    }
+  </style>
+  <!-- Preheader text (hidden) -->
+  <meta name="x-apple-disable-message-reformatting">
+  <style>
+    .preheader {
+      display: none !important;
+      visibility: hidden;
+      mso-hide: all;
+      font-size: 1px;
+      line-height: 1px;
+      max-height: 0;
+      max-width: 0;
+      opacity: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+  <span class="preheader">Your Prewrite verification code — use it to complete your sign up. Expires in 10
+    minutes.</span>
+
+  <table class="email-wrapper" width="100%" cellpadding="0" cellspacing="0" role="presentation">
+    <tr>
+      <td align="center">
+        <table class="email-content" width="100%" cellpadding="0" cellspacing="0" role="presentation">
+          <!-- Header -->
+          <tr>
+            <td class="email-header">
+              <span class="brand">Prewrite</span>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td class="email-body">
+              <p class="greeting">Welcome to Prewrite, 👋</p>
+
+              <p class="lead">
+                Thanks for creating an account with Prewrite. To complete your sign-up and verify your email address,
+                please use the one-time verification code below.
+              </p>
+
+              <div class="otp-card" role="presentation">
+                <p class="otp-code">{{otp_code}}</p>
+                <p class="otp-help">This code is valid for <strong>10 minutes</strong>. Do not share it with anyone.</p>
+              </div>
+
+              <p class="muted" style="margin-top:18px;">
+                If you didn't create an account with Prewrite, you can ignore this email and no action will be taken.
+              </p>
+
+              <hr style="border:none; border-top:1px solid #eef5ee; margin:22px 0;" />
+
+              <p style="font-size:13px; color:#4b5563; margin:0;">
+                Need help? Contact our support team at <a href="mailto:support@fonxa.com"
+                  style="color:#065f46; text-decoration:none;">support@fonxa.com</a>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="email-footer" align="center">
+              <div style="max-width:520px; margin:0 auto;">
+                <p style="margin:0 0 6px 0;">Prewrite • Building better writing workflows</p>
+                <p style="margin:0; color:#9ca3af; font-size:12px;">If you didn't request this, you can safely ignore
+                  this email.</p>
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>

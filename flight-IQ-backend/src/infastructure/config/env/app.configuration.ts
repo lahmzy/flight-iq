@@ -1,0 +1,16 @@
+export default () => ({
+  port: parseInt(process.env.PORT as string, 10) || 30001,
+  environment: process.env.NODE_ENV,
+  jwt_secret: process.env.JWT_SECRET,
+  database_url: process.env.DATABASE_URL,
+  redis_url: process.env.REDIS_URL,
+  // email_username: process.env.EMAIL_USERNAME,
+  // email_password: process.env.EMAIL_PASSWORD,
+  // email_host: process.env.EMAIL_HOST,
+  // email_port: process.env.EMAIL_PORT,
+  // aws_access_key: process.env.AWS_ACCESS_KEY_ID,
+  // aws_secret_key: process.env.AWS_SECRET_ACCESS_KEY,
+  // aws_region: process.env.AWS_S3_REGION,
+  // aws_bucket_name: process.env.AWS_BUCKET_NAME,
+  google_client_id: process.env.GOOGLE_CLIENT_ID,
+});
