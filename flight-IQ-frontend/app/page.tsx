@@ -1,19 +1,21 @@
-import { Button } from "@/components/ui/button"
+import { CauseTaxonomy } from "@/components/landing/cause-taxonomy"
+import { CriticalInvestigations } from "@/components/landing/critical-investigations"
+import { GlobalIntelligenceHub } from "@/components/landing/global-intelligence-hub"
+import { HeroSection } from "@/components/landing/hero-section"
+import { SiteFooter } from "@/components/landing/site-footer"
+import { SiteHeader } from "@/components/landing/site-header"
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
+    <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
+      <SiteHeader />
+      <main>
+        <HeroSection />
+        <CriticalInvestigations />
+        <CauseTaxonomy />
+        <GlobalIntelligenceHub />
+      </main>
+      <SiteFooter />
     </div>
   )
 }

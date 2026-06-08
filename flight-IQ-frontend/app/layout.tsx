@@ -26,7 +26,13 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", poppins.variable)}
+      className={cn(
+        "dark",
+        "antialiased",
+        fontMono.variable,
+        "font-sans",
+        poppins.variable
+      )}
     >
       <body>
         <ThemeProvider>
