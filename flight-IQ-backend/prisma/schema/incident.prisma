@@ -1,0 +1,314 @@
+// ─── FlightIQ Incident Schema ─────────────────────────────────────────────────
+// Aviation investigation platform — central incident database with normalized
+// aircraft, airline, tag, timeline, contributing factor, video, and source models.
+//
+// Design principles:
+//   - UUIDs for all primary keys (consistent with existing User model)
+//   - createdAt / updatedAt on every entity
+//   - Composite indexes for common query patterns (search, filter by tag/year/aircraft)
+//   - Normalized taxonomy via Tag (causes) — avoids repeated string columns
+//   - JSON fields reserved for AI-generated content and extensible metadata
+//   - GiST index on lat/lng for map bounding-box queries
+//   - Many-to-many junction tables for flexible tagging
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Severity {
+  Fatal
+  Major
+  Moderate
+  Minor
+}
+
+enum InvestigationStatus {
+  UnderInvestigation  @map("under_investigation")
+  PreliminaryReport   @map("preliminary_report")
+  FinalReport         @map("final_report")
+  Closed
+}
+
+enum FlightPhase {
+  PreFlight     @map("pre_flight")
+  Taxi
+  Takeoff
+  InitialClimb  @map("initial_climb")
+  Climb
+  Cruise
+  Descent
+  Approach
+  Landing
+  GoAround      @map("go_around")
+  PostFlight    @map("post_flight")
+}
+
+enum AircraftCategory {
+  Commercial
+  Cargo
+  Private
+  Military
+  Helicopter
+  GeneralAviation @map("general_aviation")
+}
+
+enum VideoPlatform {
+  YouTube @map("youtube")
+  Vimeo
+  Other
+}
+
+enum TimelineEventType {
+  Normal
+  Warning
+  Critical
+}
+
+enum FactorSeverity {
+  High
+  Medium
+  Low
+}
+
+enum FactorCategory {
+  Primary
+  Contributing
+  Positive
+}
+
+// ─── Aircraft ─────────────────────────────────────────────────────────────────
+
+model Aircraft {
+  id              String            @id @default(uuid())
+  manufacturer    String
+  model           String
+  category        AircraftCategory  @default(Commercial)
+  description     String?
+  firstFlightYear Int?
+  imageUrl        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  incidents Incident[]
+
+  @@unique([manufacturer, model])
+  @@index([manufacturer])
+  @@index([model])
+}
+
+// ─── Airline ──────────────────────────────────────────────────────────────────
+
+model Airline {
+  id      String  @id @default(uuid())
+  name    String  @unique
+  country String?
+  logoUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  incidents Incident[]
+
+  @@index([name])
+  @@index([country])
+}
+
+// ─── Tag (Cause taxonomy) ─────────────────────────────────────────────────────
+
+model Tag {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  incidents IncidentTag[]
+
+  @@index([name])
+}
+
+// ─── Incident (core entity) ───────────────────────────────────────────────────
+
+model Incident {
+  id          String              @id @default(uuid())
+  slug        String              @unique
+  title       String
+  summary     String
+  severity    Severity
+  status      InvestigationStatus @default(UnderInvestigation)
+
+  // Date & location
+  incidentDate DateTime
+  location     String
+  country      String?
+  latitude     Float?
+  longitude    Float?
+
+  // Flight details
+  flightNumber       String?
+  registration       String?
+  departureAirport   String?
+  destinationAirport String?
+  phase              FlightPhase?
+  occupants          Int?
+
+  // Casualties
+  fatalities Int @default(0)
+  injuries   Int @default(0)
+
+  // Investigation outcome
+  officialCause  String?  @db.Text
+  lessonsLearned String?  @db.Text
+
+  // ─── AI-ready fields (nullable, populated later) ────────────────────────
+  aiSummary          String?  @db.Text    // AI-generated summary
+  aiLessonsLearned   String?  @db.Text    // AI-generated lessons
+  embedding          Unsupported("vector(1536)")?  // pgvector for semantic search
+  aiMetadata         Json?                // extensible AI metadata blob
+
+  // Relations
+  aircraft    Aircraft  @relation(fields: [aircraftId], references: [id])
+  aircraftId  String
+  airline     Airline?  @relation(fields: [airlineId], references: [id])
+  airlineId   String?
+
+  tags              IncidentTag[]
+  timelineEvents    TimelineEvent[]
+  contributingFactors ContributingFactor[]
+  videos            Video[]
+  sources           Source[]
+  comments          Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ─── Indexes ────────────────────────────────────────────────────────────
+  @@index([incidentDate])
+  @@index([slug])
+  @@index([title])
+  @@index([country])
+  @@index([location])
+  @@index([aircraftId])
+  @@index([airlineId])
+  @@index([severity])
+  @@index([status])
+  @@index([incidentDate, severity])       // "recent fatal/major incidents"
+  @@index([aircraftId, incidentDate])     // "incidents per aircraft, sorted by date"
+  @@index([airlineId, incidentDate])      // "incidents per airline, sorted by date"
+  // GiST index for map bounding-box queries — requires PostgreSQL extension
+  // Run: CREATE EXTENSION IF NOT EXISTS btree_gist;
+  // Then uncomment:
+  // @@index([latitude, longitude], type: Gist)
+}
+
+// ─── Incident ↔ Tag junction table ────────────────────────────────────────────
+
+model IncidentTag {
+  incidentId String
+  tagId      String
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now())
+
+  @@id([incidentId, tagId])
+  @@index([tagId])       // "find all incidents with a given tag"
+}
+
+// ─── Timeline Event ───────────────────────────────────────────────────────────
+
+model TimelineEvent {
+  id         String            @id @default(uuid())
+  incident   Incident          @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incidentId String
+
+  timestamp  DateTime           // UTC time of the event
+  phase      FlightPhase?
+  event      String             @db.Text
+  type       TimelineEventType  @default(Normal)
+  sortOrder  Int                @default(0)  // for UI ordering
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([incidentId, sortOrder])
+}
+
+// ─── Contributing Factor ──────────────────────────────────────────────────────
+
+model ContributingFactor {
+  id          String          @id @default(uuid())
+  incident    Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incidentId  String
+
+  factor      String          @db.Text
+  category    FactorCategory
+  description String?         @db.Text
+  severity    FactorSeverity  @default(Medium)
+  sortOrder   Int             @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([incidentId, sortOrder])
+}
+
+// ─── Video ────────────────────────────────────────────────────────────────────
+
+model Video {
+  id           String        @id @default(uuid())
+  incident     Incident      @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incidentId   String
+
+  title        String
+  platform     VideoPlatform @default(YouTube)
+  url          String
+  thumbnailUrl String?
+  channelName  String?
+  duration     String?       // e.g. "14:22"
+  viewCount    String?       // e.g. "1.2M" — stored as display string for flexibility
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([incidentId])
+}
+
+// ─── Source (official investigation reports / references) ─────────────────────
+
+model Source {
+  id            String   @id @default(uuid())
+  incident      Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incidentId    String
+
+  title         String
+  sourceName    String            // e.g. "NTSB", "AAIB", "BEA", "FAA"
+  url           String?
+  publishedDate DateTime?
+  isAvailable   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([incidentId])
+  @@index([sourceName])
+}
+
+// ─── Comment (user discussion) ────────────────────────────────────────────────
+
+model Comment {
+  id         String   @id @default(uuid())
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incidentId String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId   String
+
+  text       String   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([incidentId, createdAt])
+}

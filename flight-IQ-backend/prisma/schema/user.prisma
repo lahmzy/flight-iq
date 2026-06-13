@@ -17,6 +17,7 @@ model User {
   Session              Session[]
   Device               Device[]
   otp                  otp[]
+  comments             Comment[]
 }
 
 model UserActivityLog {
