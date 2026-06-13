@@ -42,6 +42,9 @@ coverage/
 .DS_Store
 ._*
 
+# --- Design files ---
+docs/Design FlightIQ Platform/
+
 # --- Submodules ---
 # When you add a submodule, git records the pinned commit in the
 # .gitmodules file. The actual submodule working tree is ignored
