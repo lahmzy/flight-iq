@@ -158,32 +158,36 @@ model Incident {
   injuries   Int @default(0)
 
   // Investigation outcome
-  officialCause  String?  @db.Text
-  lessonsLearned String?  @db.Text
+  officialCause  String? @db.Text
+  lessonsLearned String? @db.Text
 
-  // ─── AI-ready fields (nullable, populated later) ────────────────────────
-  aiSummary          String?  @db.Text    // AI-generated summary
-  aiLessonsLearned   String?  @db.Text    // AI-generated lessons
-  embedding          Unsupported("vector(1536)")?  // pgvector for semantic search
-  aiMetadata         Json?                // extensible AI metadata blob
+  // ─── AI-ready fields (Phase 3) ────────────────────────────────────────
+
+  aiSummary String? @db.Text
+
+  aiLessonsLearned String? @db.Text
+
+  searchText String? @db.Text
+
+  aiMetadata Json?
 
   // Relations
-  aircraft    Aircraft  @relation(fields: [aircraftId], references: [id])
-  aircraftId  String
-  airline     Airline?  @relation(fields: [airlineId], references: [id])
-  airlineId   String?
+  aircraft   Aircraft @relation(fields: [aircraftId], references: [id])
+  aircraftId String
 
-  tags              IncidentTag[]
-  timelineEvents    TimelineEvent[]
-  contributingFactors ContributingFactor[]
-  videos            Video[]
-  sources           Source[]
-  comments          Comment[]
+  airline   Airline? @relation(fields: [airlineId], references: [id])
+  airlineId String?
+
+  tags                 IncidentTag[]
+  timelineEvents       TimelineEvent[]
+  contributingFactors  ContributingFactor[]
+  videos               Video[]
+  sources              Source[]
+  comments             Comment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // ─── Indexes ────────────────────────────────────────────────────────────
   @@index([incidentDate])
   @@index([slug])
   @@index([title])
@@ -193,15 +197,10 @@ model Incident {
   @@index([airlineId])
   @@index([severity])
   @@index([status])
-  @@index([incidentDate, severity])       // "recent fatal/major incidents"
-  @@index([aircraftId, incidentDate])     // "incidents per aircraft, sorted by date"
-  @@index([airlineId, incidentDate])      // "incidents per airline, sorted by date"
-  // GiST index for map bounding-box queries — requires PostgreSQL extension
-  // Run: CREATE EXTENSION IF NOT EXISTS btree_gist;
-  // Then uncomment:
-  // @@index([latitude, longitude], type: Gist)
+  @@index([incidentDate, severity])
+  @@index([aircraftId, incidentDate])
+  @@index([airlineId, incidentDate])
 }
-
 // ─── Incident ↔ Tag junction table ────────────────────────────────────────────
 
 model IncidentTag {
