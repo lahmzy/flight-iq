@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 import {
+  ArrowLeft,
   ChevronRight,
   Filter,
   MapPin,
@@ -31,6 +33,7 @@ export default function InteractiveMapPage() {
   const [severityFilter, setSeverityFilter] = useState<Severity[]>([])
   const [heatmap, setHeatmap] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const router = useRouter()
 
   const filtered = useMemo(
     () =>
@@ -70,6 +73,13 @@ export default function InteractiveMapPage() {
             className="p-5 border-b"
             style={{ borderColor: "rgba(59,130,246,0.08)" }}
           >
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-1.5 mb-3 px-2 py-1.5 rounded-lg transition-all cursor-pointer text-[0.75rem] text-[#94A3B8] bg-white/[0.03] border border-[rgba(59,130,246,0.12)] hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-400"
+            >
+              <ArrowLeft size={12} />
+              Back
+            </button>
             <div className="flex items-center justify-between mb-4">
               <p
                 style={{
