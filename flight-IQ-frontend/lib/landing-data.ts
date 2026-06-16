@@ -353,6 +353,28 @@ export const causeCategories: {
   { name: "ATC Error", count: 189, color: "#EC4899", icon: Radio },
 ]
 
+export const annualStats = [
+  { year: "2019", total: 612, fatal: 14, injuries: 87 },
+  { year: "2020", total: 428, fatal: 9, injuries: 53 },
+  { year: "2021", total: 531, fatal: 11, injuries: 68 },
+  { year: "2022", total: 587, fatal: 12, injuries: 79 },
+  { year: "2023", total: 564, fatal: 10, injuries: 71 },
+  { year: "2024", total: 552, fatal: 9, injuries: 65 },
+  { year: "2025", total: 528, fatal: 8, injuries: 59 },
+  { year: "2026", total: 496, fatal: 7, injuries: 52 },
+]
+
+export const aircraftTypeStats = [
+  { type: "Boeing 737-800", incidents: 152, fatalities: 28 },
+  { type: "Airbus A320", incidents: 138, fatalities: 19 },
+  { type: "Boeing 777", incidents: 87, fatalities: 12 },
+  { type: "ATR 72", incidents: 74, fatalities: 16 },
+  { type: "Bombardier CRJ", incidents: 61, fatalities: 8 },
+  { type: "Airbus A330", incidents: 54, fatalities: 5 },
+  { type: "Boeing 787", incidents: 42, fatalities: 3 },
+  { type: "Embraer E190", incidents: 38, fatalities: 4 },
+]
+
 export const heroStats = [
   { value: "4,608", label: "Total Investigations", sub: "All time" },
   { value: "178", label: "Countries", sub: "Worldwide coverage" },
