@@ -43,7 +43,7 @@ coverage/
 ._*
 
 # --- Design files ---
-docs/Design FlightIQ Platform/
+docs/
 
 # --- Submodules ---
 # When you add a submodule, git records the pinned commit in the
