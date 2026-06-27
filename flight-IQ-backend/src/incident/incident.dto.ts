@@ -58,10 +58,6 @@ export class CreateIncidentDto {
   aircraftId: string;
 
   @IsOptional()
-  @IsUUID()
-  airlineId?: string;
-
-  @IsOptional()
   @IsString()
   flightNumber?: string;
 
@@ -161,10 +157,6 @@ export class UpdateIncidentDto {
   aircraftId?: string;
 
   @IsOptional()
-  @IsUUID()
-  airlineId?: string;
-
-  @IsOptional()
   @IsString()
   flightNumber?: string;
 
@@ -255,10 +247,6 @@ export class GetIncidentsQueryDto {
   @IsOptional()
   @IsUUID()
   aircraftId?: string;
-
-  @IsOptional()
-  @IsUUID()
-  airlineId?: string;
 
   @IsOptional()
   @IsDateString()

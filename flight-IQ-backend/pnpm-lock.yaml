@@ -102,6 +102,9 @@ importers:
       '@eslint/js':
         specifier: ^9.39.2
         version: 9.39.2
+      '@fast-csv/parse':
+        specifier: ^5.0.7
+        version: 5.0.7
       '@nestjs/cli':
         specifier: ^11.0.16
         version: 11.0.16(@swc/cli@0.7.10(@swc/core@1.15.11)(chokidar@4.0.3))(@swc/core@1.15.11)(@types/node@25.2.0)
@@ -489,6 +492,9 @@ packages:
   '@eslint/plugin-kit@0.4.1':
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@fast-csv/parse@5.0.7':
+    resolution: {integrity: sha512-MeuDeQj0DVmIGWky8STaKtvj232Gpq8kjrOGplHJ99Os7OO5CetVfXvUGqX/3GHYFOUsz6FK8isWtDY2XTFNWw==}
 
   '@hono/node-server@1.19.9':
     resolution: {integrity: sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw==}
@@ -3058,6 +3064,12 @@ packages:
   lodash.defaults@4.2.0:
     resolution: {integrity: sha512-qjxPLHd3r5DnsdGacqOMU6pb/avJzdh9tFX2ymgoZE27BmjXrNy/y4LoaiTeAb+O3gL8AfpJGtqfX/ae2leYYQ==}
 
+  lodash.escaperegexp@4.1.2:
+    resolution: {integrity: sha512-TM9YBvyC84ZxE3rgfefxUWiQKLilstD6k7PTGt6wfbtXF8ixIJLOL3VYyV/z+ZiPLsVxAsKAFVwWlWeb2Y8Yyw==}
+
+  lodash.groupby@4.6.0:
+    resolution: {integrity: sha512-5dcWxm23+VAoz+awKmBaiBvzox8+RqMgFhi7UvX9DHZr2HdxHXM/Wrf8cfKpsW37RNrvtPn6hSwNqurSILbmJw==}
+
   lodash.includes@4.3.0:
     resolution: {integrity: sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==}
 
@@ -3087,6 +3099,9 @@ packages:
 
   lodash.once@4.1.1:
     resolution: {integrity: sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==}
+
+  lodash.uniq@4.5.0:
+    resolution: {integrity: sha512-xfBaXQd9ryd9dlSDvnvI0lvxfLJlYAZzXomUYzLKtUeOQvOP5piqAWuGtrhWeqaXK9hhoM/iyJc5AV+XfsX3HQ==}
 
   lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
@@ -4618,6 +4633,12 @@ snapshots:
     dependencies:
       '@eslint/core': 0.17.0
       levn: 0.4.1
+
+  '@fast-csv/parse@5.0.7':
+    dependencies:
+      lodash.escaperegexp: 4.1.2
+      lodash.groupby: 4.6.0
+      lodash.uniq: 4.5.0
 
   '@hono/node-server@1.19.9(hono@4.11.4)':
     dependencies:
@@ -7612,6 +7633,10 @@ snapshots:
 
   lodash.defaults@4.2.0: {}
 
+  lodash.escaperegexp@4.1.2: {}
+
+  lodash.groupby@4.6.0: {}
+
   lodash.includes@4.3.0: {}
 
   lodash.isarguments@3.1.0: {}
@@ -7631,6 +7656,8 @@ snapshots:
   lodash.merge@4.6.2: {}
 
   lodash.once@4.1.1: {}
+
+  lodash.uniq@4.5.0: {}
 
   lodash@4.17.21: {}
 

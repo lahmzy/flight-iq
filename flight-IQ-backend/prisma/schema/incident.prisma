@@ -1,17 +1,24 @@
 // ─── FlightIQ Incident Schema ─────────────────────────────────────────────────
-// Aviation investigation platform — central incident database with normalized
-// aircraft, airline, tag, timeline, contributing factor, video, and source models.
+// Aviation investigation platform — NTSB-compatible schema
 //
 // Design principles:
-//   - UUIDs for all primary keys (consistent with existing User model)
-//   - createdAt / updatedAt on every entity
-//   - Composite indexes for common query patterns (search, filter by tag/year/aircraft)
-//   - Normalized taxonomy via Tag (causes) — avoids repeated string columns
-//   - JSON fields reserved for AI-generated content and extensible metadata
-//   - GiST index on lat/lng for map bounding-box queries
-//   - Many-to-many junction tables for flexible tagging
+//   - UUIDs for all platform-generated primary keys
+//   - NTSB natural keys (ntsbEventId / ntsbAircraftKey) on every NTSB-sourced model
+//   - Multi-aircraft per incident via IncidentAircraft junction table
+//   - Narratives stored per (ev_id, Aircraft_Key) in AircraftNarrative
+//   - Structured NTSB findings stored in Finding model
+//   - Nullable title and summary — graceful partial-import support
+//   - Airline attached at aircraft level (not incident level)
+//   - JSON fields for AI-generated content and extensible metadata
+//   - Composite indexes for NTSB join keys and common query patterns
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
+
+/// NTSB event type: Accident or Incident
+enum EvType {
+  Accident  @map("ACC")
+  Incident  @map("INC")
+}
 
 enum Severity {
   Fatal
@@ -21,26 +28,28 @@ enum Severity {
 }
 
 enum InvestigationStatus {
-  UnderInvestigation  @map("under_investigation")
-  PreliminaryReport   @map("preliminary_report")
-  FinalReport         @map("final_report")
+  UnderInvestigation @map("under_investigation")
+  PreliminaryReport  @map("preliminary_report")
+  FinalReport        @map("final_report")
   Closed
 }
 
 enum FlightPhase {
-  PreFlight     @map("pre_flight")
+  PreFlight    @map("pre_flight")
   Taxi
   Takeoff
-  InitialClimb  @map("initial_climb")
+  InitialClimb @map("initial_climb")
   Climb
   Cruise
   Descent
   Approach
   Landing
-  GoAround      @map("go_around")
-  PostFlight    @map("post_flight")
+  GoAround     @map("go_around")
+  PostFlight   @map("post_flight")
 }
 
+/// Normalised aircraft category enum.
+/// The raw NTSB acft_category string is also stored on the Aircraft model.
 enum AircraftCategory {
   Commercial
   Cargo
@@ -48,6 +57,10 @@ enum AircraftCategory {
   Military
   Helicopter
   GeneralAviation @map("general_aviation")
+  Ultralight
+  Glider
+  Balloon
+  Unknown
 }
 
 enum VideoPlatform {
@@ -74,42 +87,125 @@ enum FactorCategory {
   Positive
 }
 
-// ─── Aircraft ─────────────────────────────────────────────────────────────────
-
-model Aircraft {
-  id              String            @id @default(uuid())
-  manufacturer    String
-  model           String
-  category        AircraftCategory  @default(Commercial)
-  description     String?
-  firstFlightYear Int?
-  imageUrl        String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  incidents Incident[]
-
-  @@unique([manufacturer, model])
-  @@index([manufacturer])
-  @@index([model])
+/// Top-level category parsed from NTSB finding_description (first segment)
+enum FindingCategory {
+  Personnel
+  Environmental
+  Aircraft
+  Organization
+  Other
 }
 
-// ─── Airline ──────────────────────────────────────────────────────────────────
+// ─── Aircraft ─────────────────────────────────────────────────────────────────
+// One row per NTSB (ev_id, Aircraft_Key) pair.
+// Multiple Aircraft rows can share the same make/model — they are event-specific
+// records, not a deduplicated aircraft registry.
 
-model Airline {
-  id      String  @id @default(uuid())
-  name    String  @unique
-  country String?
-  logoUrl String?
+model Aircraft {
+  id String @id @default(uuid())
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // ── NTSB natural keys ─────────────────────────────────────────────────────
+  ntsbEventId    String @map("ntsb_event_id")    // ev_id from NTSB AIRCRAFT table
+  ntsbAircraftKey Int    @map("ntsb_aircraft_key") // Aircraft_Key from NTSB
 
-  incidents Incident[]
+  // ── Registration & identity ───────────────────────────────────────────────
+  registrationNo String? @map("registration_no")  // regis_no
+  make           String? @map("make")              // acft_make
+  model          String? @map("model")             // acft_model
+  series         String? @map("series")            // acft_series
+  serialNo       String? @map("serial_no")         // acft_serial_no
 
-  @@index([name])
-  @@index([country])
+  // ── Performance / classification ─────────────────────────────────────────
+  certMaxGrossWeight Int?             @map("cert_max_gross_weight") // cert_max_gr_wt
+  ntsbCategory       String?           @map("ntsb_category") // raw acft_category from NTSB
+  category           AircraftCategory?                       // nullable — set during enrichment
+  homebuilt          Boolean          @default(false)
+
+  // ── Flight context (per-aircraft per-event) ───────────────────────────────
+  flightPhase  FlightPhase? @map("flight_phase")
+  flightNumber String?      @map("flight_number")
+  operatorName String?      @map("operator_name")
+
+  // ── Enrichment (manually added / AI populated) ────────────────────────────
+  description String? @db.Text
+  imageUrl    String? @map("image_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // ── Relations ─────────────────────────────────────────────────────────────
+  incidents  IncidentAircraft[]
+  narrative  AircraftNarrative?
+  findings   Finding[]
+
+  /// Composite unique constraint — prevents duplicate NTSB aircraft imports
+  @@unique([ntsbEventId, ntsbAircraftKey])
+  @@index([ntsbEventId])
+  @@index([registrationNo])
+  @@index([make])
+  @@index([model])
+  @@index([make, model])
+  @@index([operatorName])
+  @@map("aircraft")
+}
+
+// ─── Aircraft Narrative ───────────────────────────────────────────────────────
+// Stores the four narrative text fields from the NTSB NARRATIVES table.
+// Keyed per (ev_id, Aircraft_Key) — one row per aircraft per incident.
+// For the primary aircraft, narr_cause is also denormalized into
+// Incident.officialCause for convenience.
+
+model AircraftNarrative {
+  id String @id @default(uuid())
+
+  ntsbEventId     String @map("ntsb_event_id")
+  ntsbAircraftKey Int    @map("ntsb_aircraft_key")
+
+  /// narr_accp — preliminary/accident narrative
+  narrativeAccp  String? @db.Text @map("narrative_accp")
+  /// narr_accf — final accident narrative
+  narrativeAccf  String? @db.Text @map("narrative_accf")
+  /// narr_cause — official probable cause statement
+  narrativeCause String? @db.Text @map("narrative_cause")
+  /// narr_inc — incident narrative (for INC-type events)
+  narrativeInc   String? @db.Text @map("narrative_inc")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  aircraft Aircraft @relation(fields: [ntsbEventId, ntsbAircraftKey], references: [ntsbEventId, ntsbAircraftKey], onDelete: Cascade)
+
+  @@unique([ntsbEventId, ntsbAircraftKey])
+  @@index([ntsbEventId])
+  @@map("aircraft_narratives")
+}
+
+// ─── Finding ──────────────────────────────────────────────────────────────────
+// Structured NTSB findings from the FINDINGS table.
+// These are authoritative, code-based contributing factors — not AI-derived.
+// ContributingFactor rows can optionally reference a Finding via findingId.
+
+model Finding {
+  id String @id @default(uuid())
+
+  ntsbEventId     String @map("ntsb_event_id")
+  ntsbAircraftKey Int    @map("ntsb_aircraft_key")
+  findingNo       Int    @map("finding_no")   // finding_no from NTSB
+
+  findingCode String?         @map("finding_code")   // structured code from NTSB
+  description String?         @db.Text               // finding_description
+  category    FindingCategory @default(Other)         // parsed from description prefix
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  aircraft            Aircraft             @relation(fields: [ntsbEventId, ntsbAircraftKey], references: [ntsbEventId, ntsbAircraftKey], onDelete: Cascade)
+  contributingFactors ContributingFactor[]
+
+  /// Natural key from NTSB — prevents duplicate finding imports
+  @@unique([ntsbEventId, ntsbAircraftKey, findingNo])
+  @@index([ntsbEventId])
+  @@index([findingCode])
+  @@index([category])
+  @@map("findings")
 }
 
 // ─── Tag (Cause taxonomy) ─────────────────────────────────────────────────────
@@ -120,194 +216,261 @@ model Tag {
   slug        String  @unique
   description String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   incidents IncidentTag[]
 
   @@index([name])
+  @@map("tags")
 }
 
 // ─── Incident (core entity) ───────────────────────────────────────────────────
+// Corresponds to one NTSB EVENTS row (one ev_id).
+// Aircraft are linked via the IncidentAircraft junction table.
+// Airlines are linked via Aircraft → AircraftAirline → Airline.
 
 model Incident {
-  id          String              @id @default(uuid())
-  slug        String              @unique
-  title       String
-  summary     String
-  severity    Severity
-  status      InvestigationStatus @default(UnderInvestigation)
+  id String @id @default(uuid())
 
-  // Date & location
-  incidentDate DateTime
-  location     String
+  // ── NTSB natural keys ─────────────────────────────────────────────────────
+  ntsbEventId String? @unique @map("ntsb_event_id") // ev_id — null for manually entered incidents
+  ntsbNo      String? @unique @map("ntsb_no")       // ntsb_no — human-readable report number
+
+  // ── Identity ──────────────────────────────────────────────────────────────
+  slug  String  @unique
+  /// Auto-generated if absent — e.g. "{make} {model} — {city}, {state} ({year})"
+  title String? @db.Text
+
+  /// NTSB event type: Accident (ACC) or Incident (INC)
+  evType EvType? @map("ev_type")
+
+  severity Severity
+  status   InvestigationStatus @default(UnderInvestigation)
+
+  // ── Date & location ───────────────────────────────────────────────────────
+  incidentDate DateTime @map("incident_date")
+  /// ev_city
+  city         String?
+  /// ev_state
+  state        String?
   country      String?
+  /// apt_name — airport name if the event occurred on/near an airport
+  aptName      String? @map("apt_name")
   latitude     Float?
   longitude    Float?
 
-  // Flight details
-  flightNumber       String?
-  registration       String?
-  departureAirport   String?
-  destinationAirport String?
-  phase              FlightPhase?
-  occupants          Int?
+  // ── Flight route ──────────────────────────────────────────────────────────
+  departureAirport   String? @map("departure_airport")
+  destinationAirport String? @map("destination_airport")
 
-  // Casualties
+  // ── Casualties ────────────────────────────────────────────────────────────
   fatalities Int @default(0)
   injuries   Int @default(0)
+  occupants  Int?
 
-  // Investigation outcome
-  officialCause  String? @db.Text
-  lessonsLearned String? @db.Text
+  // ── Investigation outcome ─────────────────────────────────────────────────
+  /// Denormalized from AircraftNarrative.narrativeCause (primary aircraft).
+  /// Null until the narrative import step completes.
+  officialCause String? @db.Text @map("official_cause")
 
-  // ─── AI-ready fields (Phase 3) ────────────────────────────────────────
+  /// Denormalized from AircraftNarrative.narrativeAccp (primary aircraft) for performance.
+  /// This field is kept to allow fast full-text search and listing queries without deep joins.
+  /// Null until the narrative import step completes.
+  summary String? @db.Text
 
-  aiSummary String? @db.Text
+  // ── AI-ready fields ───────────────────────────────────────────────────────
+  aiSummary        String? @db.Text @map("ai_summary")
+  aiLessonsLearned String? @db.Text @map("ai_lessons_learned")
+  /// Concatenated text for full-text search / AI embedding input
+  searchText       String? @db.Text @map("search_text")
+  aiMetadata       Json?   @map("ai_metadata")
 
-  aiLessonsLearned String? @db.Text
+  // ── Raw data preservation ──────────────────────────────────────────────────
+  rawReport Json? @map("raw_report")
 
-  searchText String? @db.Text
+  // ── Import and Dataset Versioning ──────────────────────────────────────────
+  importVersion Int     @default(1) @map("import_version")
+  sourceVersion String? @map("source_version")
 
-  aiMetadata Json?
+  // ── Relations ─────────────────────────────────────────────────────────────
+  aircraft            IncidentAircraft[]
+  tags                IncidentTag[]
+  timelineEvents      TimelineEvent[]
+  contributingFactors ContributingFactor[]
+  videos              Video[]
+  sources             Source[]
+  comments            Comment[]
 
-  // Relations
-  aircraft   Aircraft @relation(fields: [aircraftId], references: [id])
-  aircraftId String
-
-  airline   Airline? @relation(fields: [airlineId], references: [id])
-  airlineId String?
-
-  tags                 IncidentTag[]
-  timelineEvents       TimelineEvent[]
-  contributingFactors  ContributingFactor[]
-  videos               Video[]
-  sources              Source[]
-  comments             Comment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([incidentDate])
   @@index([slug])
-  @@index([title])
   @@index([country])
-  @@index([location])
-  @@index([aircraftId])
-  @@index([airlineId])
+  @@index([city])
+  @@index([state])
   @@index([severity])
   @@index([status])
+  @@index([evType])
   @@index([incidentDate, severity])
-  @@index([aircraftId, incidentDate])
-  @@index([airlineId, incidentDate])
+  @@map("incidents")
 }
+
+// ─── Incident ↔ Aircraft junction table ───────────────────────────────────────
+// Replaces the old single aircraftId FK on Incident.
+// One row per aircraft involved in an incident.
+
+model IncidentAircraft {
+  incidentId String @map("incident_id")
+  aircraftId String @map("aircraft_id")
+
+  /// true = the primary/first aircraft in the NTSB report (Aircraft_Key = 1)
+  isPrimary Boolean @default(false) @map("is_primary")
+  /// Optional role descriptor, e.g. "student pilot aircraft", "air traffic target"
+  role      String?
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  aircraft Aircraft @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+
+  @@id([incidentId, aircraftId])
+  @@index([aircraftId])
+  @@index([incidentId, isPrimary])
+  @@map("incident_aircraft")
+}
+
 // ─── Incident ↔ Tag junction table ────────────────────────────────────────────
 
 model IncidentTag {
-  incidentId String
-  tagId      String
+  incidentId String @map("incident_id")
+  tagId      String @map("tag_id")
 
   incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
   tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
-  assignedAt DateTime @default(now())
+  assignedAt DateTime @default(now()) @map("assigned_at")
 
   @@id([incidentId, tagId])
-  @@index([tagId])       // "find all incidents with a given tag"
+  @@index([tagId])
+  @@map("incident_tags")
 }
 
 // ─── Timeline Event ───────────────────────────────────────────────────────────
+// Used for AI-generated or manually entered timelines.
+// NOT populated from the NTSB OCCURRENCES table (currently empty).
 
 model TimelineEvent {
-  id         String            @id @default(uuid())
-  incident   Incident          @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  incidentId String
+  id         String @id @default(uuid())
+  incidentId String @map("incident_id")
 
-  timestamp  DateTime           // UTC time of the event
-  phase      FlightPhase?
-  event      String             @db.Text
-  type       TimelineEventType  @default(Normal)
-  sortOrder  Int                @default(0)  // for UI ordering
+  /// UTC timestamp of the event (relative to the incident date where absolute time is unknown)
+  timestamp DateTime
+  phase     FlightPhase?
+  event     String            @db.Text
+  type      TimelineEventType @default(Normal)
+  sortOrder Int               @default(0) @map("sort_order")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   @@index([incidentId, sortOrder])
+  @@map("timeline_events")
 }
 
 // ─── Contributing Factor ──────────────────────────────────────────────────────
+// Can be sourced from:
+//   (a) NTSB Finding — link via findingId (authoritative)
+//   (b) AI-generated — findingId is null
+//   (c) Manually entered — findingId is null
 
 model ContributingFactor {
-  id          String          @id @default(uuid())
-  incident    Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  incidentId  String
+  id         String @id @default(uuid())
+  incidentId String @map("incident_id")
+  /// Optional link to the authoritative NTSB Finding that sourced this factor
+  findingId  String? @map("finding_id")
 
-  factor      String          @db.Text
+  factor      String         @db.Text
   category    FactorCategory
-  description String?         @db.Text
-  severity    FactorSeverity  @default(Medium)
-  sortOrder   Int             @default(0)
+  description String?        @db.Text
+  severity    FactorSeverity @default(Medium)
+  sortOrder   Int            @default(0) @map("sort_order")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  finding  Finding? @relation(fields: [findingId], references: [id], onDelete: SetNull)
 
   @@index([incidentId, sortOrder])
+  @@index([findingId])
+  @@map("contributing_factors")
 }
 
 // ─── Video ────────────────────────────────────────────────────────────────────
 
 model Video {
-  id           String        @id @default(uuid())
-  incident     Incident      @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  incidentId   String
+  id         String @id @default(uuid())
+  incidentId String @map("incident_id")
 
   title        String
   platform     VideoPlatform @default(YouTube)
   url          String
-  thumbnailUrl String?
-  channelName  String?
-  duration     String?       // e.g. "14:22"
-  viewCount    String?       // e.g. "1.2M" — stored as display string for flexibility
+  thumbnailUrl String?       @map("thumbnail_url")
+  channelName  String?       @map("channel_name")
+  /// Display string, e.g. "14:22"
+  duration     String?
+  /// Display string, e.g. "1.2M"
+  viewCount    String?       @map("view_count")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   @@index([incidentId])
+  @@map("videos")
 }
 
 // ─── Source (official investigation reports / references) ─────────────────────
 
 model Source {
-  id            String   @id @default(uuid())
-  incident      Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  incidentId    String
+  id         String @id @default(uuid())
+  incidentId String @map("incident_id")
 
   title         String
-  sourceName    String            // e.g. "NTSB", "AAIB", "BEA", "FAA"
+  /// e.g. "NTSB", "AAIB", "BEA", "FAA"
+  sourceName    String   @map("source_name")
   url           String?
-  publishedDate DateTime?
-  isAvailable   Boolean  @default(true)
+  publishedDate DateTime? @map("published_date")
+  isAvailable   Boolean  @default(true) @map("is_available")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   @@index([incidentId])
   @@index([sourceName])
+  @@map("sources")
 }
 
 // ─── Comment (user discussion) ────────────────────────────────────────────────
 
 model Comment {
-  id         String   @id @default(uuid())
-  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  incidentId String
-  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId   String
+  id         String @id @default(uuid())
+  incidentId String @map("incident_id")
+  authorId   String @map("author_id")
 
-  text       String   @db.Text
+  text String @db.Text
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([incidentId, createdAt])
+  @@map("comments")
 }

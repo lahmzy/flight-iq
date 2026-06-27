@@ -29,14 +29,12 @@ const ALLOWED_SORT_COLUMNS = new Set([
 /** Lightweight relations returned in list queries */
 const listInclude = {
   aircraft: true,
-  airline: true,
   _count: { select: { tags: true, comments: true } },
 } satisfies Prisma.IncidentInclude;
 
 /** Full relations returned in detail queries */
 const detailInclude = {
   aircraft: true,
-  airline: true,
   tags: { include: { tag: true } },
   timelineEvents: { orderBy: { sortOrder: 'asc' as const } },
   contributingFactors: { orderBy: { sortOrder: 'asc' as const } },
@@ -80,17 +78,6 @@ export class IncidentService {
       );
     }
 
-    if (dto.airlineId) {
-      const airline = await this.prisma.airline.findUnique({
-        where: { id: dto.airlineId },
-      });
-      if (!airline) {
-        throw new BadRequestException(
-          `Airline with id '${dto.airlineId}' not found`,
-        );
-      }
-    }
-
     // Generate unique slug
     const base = slugify(dto.title);
     let slug = base;
@@ -100,14 +87,31 @@ export class IncidentService {
       suffix++;
     }
 
-    // Extract tagIds before spreading into Prisma create
-    const { tagIds, ...data } = dto;
+    // Extract tagIds and relation-specific fields before spreading into Prisma create
+    const {
+      tagIds,
+      aircraftId,
+      flightNumber,
+      registration,
+      phase,
+      location,
+      lessonsLearned,
+      ...data
+    } = dto;
 
     return this.prisma.incident.create({
       data: {
         ...data,
         slug,
         incidentDate: new Date(dto.incidentDate),
+        ...(location ? { city: location } : {}),
+        ...(lessonsLearned ? { aiLessonsLearned: lessonsLearned } : {}),
+        aircraft: {
+          create: {
+            aircraftId,
+            isPrimary: true,
+          },
+        },
         tags:
           tagIds && tagIds.length > 0
             ? { create: tagIds.map((tagId) => ({ tagId })) }
@@ -130,8 +134,13 @@ export class IncidentService {
     if (query.severity) where.severity = query.severity;
     if (query.status) where.status = query.status;
     if (query.country) where.country = query.country;
-    if (query.aircraftId) where.aircraftId = query.aircraftId;
-    if (query.airlineId) where.airlineId = query.airlineId;
+    if (query.aircraftId) {
+      where.aircraft = {
+        some: {
+          aircraftId: query.aircraftId,
+        },
+      };
+    }
 
     // Date range
     const start = parseDate(query.startDate);
@@ -234,17 +243,6 @@ export class IncidentService {
       }
     }
 
-    if (dto.airlineId) {
-      const airline = await this.prisma.airline.findUnique({
-        where: { id: dto.airlineId },
-      });
-      if (!airline) {
-        throw new BadRequestException(
-          `Airline with id '${dto.airlineId}' not found`,
-        );
-      }
-    }
-
     // Regenerate slug if title changes
     let slug: string | undefined;
     if (dto.title && dto.title !== existing.title) {
@@ -261,7 +259,17 @@ export class IncidentService {
       }
     }
 
-    const { tagIds, ...data } = dto;
+    // Extract tagIds and relation-specific fields before spreading into Prisma update
+    const {
+      tagIds,
+      aircraftId,
+      flightNumber,
+      registration,
+      phase,
+      location,
+      lessonsLearned,
+      ...data
+    } = dto;
 
     // Handle tag reassignment: disconnect all, then connect new set
     const tagUpdate =
@@ -272,6 +280,14 @@ export class IncidentService {
           }
         : undefined;
 
+    // Handle aircraft connection update
+    const aircraftUpdate = aircraftId
+      ? {
+          deleteMany: {},
+          create: { aircraftId, isPrimary: true },
+        }
+      : undefined;
+
     return this.prisma.incident.update({
       where: { id },
       data: {
@@ -280,7 +296,10 @@ export class IncidentService {
         ...(dto.incidentDate
           ? { incidentDate: new Date(dto.incidentDate) }
           : {}),
+        ...(location ? { city: location } : {}),
+        ...(lessonsLearned ? { aiLessonsLearned: lessonsLearned } : {}),
         ...(tagUpdate ? { tags: tagUpdate } : {}),
+        ...(aircraftUpdate ? { aircraft: aircraftUpdate } : {}),
       },
       include: listInclude,
     });
