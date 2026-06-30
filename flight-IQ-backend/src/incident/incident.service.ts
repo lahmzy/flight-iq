@@ -28,13 +28,13 @@ const ALLOWED_SORT_COLUMNS = new Set([
 
 /** Lightweight relations returned in list queries */
 const listInclude = {
-  aircraft: true,
+  aircraft: { include: { aircraft: true } },
   _count: { select: { tags: true, comments: true } },
 } satisfies Prisma.IncidentInclude;
 
 /** Full relations returned in detail queries */
 const detailInclude = {
-  aircraft: true,
+  aircraft: { include: { aircraft: true } },
   tags: { include: { tag: true } },
   timelineEvents: { orderBy: { sortOrder: 'asc' as const } },
   contributingFactors: { orderBy: { sortOrder: 'asc' as const } },
@@ -61,9 +61,14 @@ function parseDate(d: string | undefined): Date | undefined {
 
 // ─── Service ───────────────────────────────────────────────────────────────────
 
+import { AircraftImageService } from './aircraft-image.service';
+
 @Injectable()
 export class IncidentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly imageService: AircraftImageService,
+  ) {}
 
   // ── Create ────────────────────────────────────────────────────────────────
 
@@ -203,6 +208,13 @@ export class IncidentService {
       throw new NotFoundException(`Incident with slug '${slug}' not found`);
     }
 
+    // Ensure images are populated for all aircraft
+    for (const link of incident.aircraft) {
+      if (link.aircraft) {
+        link.aircraft = await this.imageService.ensureAircraftImage(link.aircraft);
+      }
+    }
+
     return incident;
   }
 
@@ -216,6 +228,13 @@ export class IncidentService {
 
     if (!incident) {
       throw new NotFoundException(`Incident with id '${id}' not found`);
+    }
+
+    // Ensure images are populated for all aircraft
+    for (const link of incident.aircraft) {
+      if (link.aircraft) {
+        link.aircraft = await this.imageService.ensureAircraftImage(link.aircraft);
+      }
     }
 
     return incident;
