@@ -50,20 +50,27 @@ export class ImportService<T> {
    */
   constructor(
     private readonly filePath: string,
-    private readonly rowMapper: (record: Record<string, string>) => RowResult<T>,
-    private readonly batchHandler: (prisma: PrismaClient, rows: T[]) => Promise<void>,
+    private readonly rowMapper: (
+      record: Record<string, string>,
+    ) => RowResult<T>,
+    private readonly batchHandler: (
+      prisma: PrismaClient,
+      rows: T[],
+    ) => Promise<void>,
     private readonly options?: {
       chunkSize?: number;
       parseOptions?: ParserOptionsArgs;
       hasHeader?: boolean;
-    }
+    },
   ) {
     const connectionString = process.env['DATABASE_URL'];
     if (!connectionString) {
       throw new Error('DATABASE_URL environment variable is not set.');
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) } as any);
+    this.prisma = new PrismaClient({
+      adapter: new PrismaPg({ connectionString }),
+    } as any);
   }
 
   /**
@@ -92,7 +99,9 @@ export class ImportService<T> {
             if (rowsBuffer.length >= chunkSize) {
               parser.pause(); // back‑pressure
               try {
-                await this.persistChunk(rowsBuffer.splice(0, rowsBuffer.length));
+                await this.persistChunk(
+                  rowsBuffer.splice(0, rowsBuffer.length),
+                );
                 this.logProgress();
               } catch (e) {
                 reject(e);
