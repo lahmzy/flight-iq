@@ -35,7 +35,7 @@ export interface Incident {
   flightNumber: string
   severity: Severity
   status: Status
-  causes: Cause[]
+  causes: string[]
   fatalities: number
   injuries: number
   occupants: number
@@ -392,7 +392,7 @@ export const quickTags = [
 
 export const navLinks = [
   { label: "Home", href: "/" },
-  { label: "Investigations", href: "/investigations" },
+  { label: "Investigations", href: "/incident" },
   { label: "Live Map", href: "/map" },
   { label: "Statistics", href: "/statistics" },
 ] as const

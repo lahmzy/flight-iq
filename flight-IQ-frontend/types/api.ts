@@ -28,9 +28,17 @@ export interface ApiError {
  * is commonly used for success notifications.
  */
 export interface ApiResponse<T> {
+  success: boolean;
   data: T;
   message?: string;
 }
+
+/**
+ * Backend response envelope returned by the Nest global response
+ * interceptor. The backend is the source of truth, so frontend
+ * query types should model this shape directly.
+ */
+export type BackendApiResponse<T> = ApiResponse<T>;
 
 /**
  * Generic pagination metadata. Compatible with most common

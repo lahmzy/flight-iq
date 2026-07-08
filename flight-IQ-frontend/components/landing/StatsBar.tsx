@@ -3,7 +3,9 @@
 import { motion } from "framer-motion"
 
 import { GlassCard } from "@/components/ui/GlassCard"
-import { heroStats } from "@/lib/landing-data"
+import { useGetRequest } from "@/hooks/useGetRequest"
+import type { BackendApiResponse } from "@/types/api"
+import type { BackendIncidentList } from "@/types/incident"
 
 const container = {
   hidden: {},
@@ -21,6 +23,23 @@ const item = {
 }
 
 export function StatsBar() {
+  const { data } = useGetRequest<BackendApiResponse<BackendIncidentList>>({
+    url: "/incidents?limit=1",
+    queryKey: ["stats_total"],
+  })
+
+  const totalInvestigations = data?.data?.meta?.total
+    ? data.data.meta.total.toLocaleString()
+    : "..."
+
+  // Create NTSB-aware stats matching the initial plan
+  const dynamicStats = [
+    { value: totalInvestigations, label: "Total Investigations", sub: "All time" },
+    { value: "NTSB", label: "Data Source", sub: "NTSB CSV dataset" },
+    { value: "Map", label: "Mapped Incidents", sub: "Incidents with coordinates" },
+    { value: "< 48h", label: "Report Indexing", sub: "After NTSB publication" },
+  ]
+
   return (
     <section className="mx-auto max-w-7xl px-6 pb-24">
       <motion.div
@@ -30,7 +49,7 @@ export function StatsBar() {
         viewport={{ once: true, amount: 0.2 }}
         variants={container}
       >
-        {heroStats.map((stat) => (
+        {dynamicStats.map((stat) => (
           <motion.div key={stat.label} variants={item}>
             <GlassCard hover={false} className="text-center">
               <div
@@ -71,3 +90,4 @@ export function StatsBar() {
     </section>
   )
 }
+

@@ -61,7 +61,7 @@ export default function InvestigationsPage() {
         !selectedStatuses.length || selectedStatuses.includes(inc.status)
       const matchCause =
         !selectedCauses.length ||
-        inc.causes.some((c) => selectedCauses.includes(c))
+        inc.causes.some((c) => selectedCauses.includes(c as Cause))
 
       return matchQ && matchSev && matchStat && matchCause
     })
