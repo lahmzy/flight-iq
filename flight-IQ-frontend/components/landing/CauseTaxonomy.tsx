@@ -42,12 +42,12 @@ export function CauseTaxonomy() {
         variants={headerFade}
       >
         <SectionLabel
-          eyebrow="Browse by Cause"
+          eyebrow="Browse by Finding Category"
           title="Investigation Categories"
           subtitle="Filter the database by primary contributing factor"
         />
         <Link
-          href="/investigations"
+          href="/incident"
           className="hidden items-center gap-1.5 transition-colors hover:text-white md:flex"
           style={{ color: "#3B82F6", fontSize: "0.875rem", fontWeight: 500 }}
         >
@@ -67,7 +67,7 @@ export function CauseTaxonomy() {
           return (
             <motion.div key={cat.name} variants={item} whileHover={{ y: -4 }}>
               <Link
-                href={`/investigations?cause=${encodeURIComponent(cat.name)}`}
+                href={`/incident?findings=${encodeURIComponent(cat.name)}`}
               >
                 <GlassCard
                   className="group h-full"

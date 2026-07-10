@@ -2,6 +2,13 @@ import type { PaginatedResponse } from "@/types/api"
 
 export type BackendSeverity = "Fatal" | "Major" | "Moderate" | "Minor"
 
+export type FindingCategory =
+  | "Personnel"
+  | "Environmental"
+  | "Aircraft"
+  | "Organization"
+  | "Other"
+
 export type BackendInvestigationStatus =
   | "UnderInvestigation"
   | "PreliminaryReport"
@@ -33,6 +40,26 @@ export interface BackendIncidentCount {
   comments?: number
 }
 
+export interface BackendTag {
+  tagId: string
+  tag: { id: string; name: string; slug: string }
+}
+
+/** Lightweight marker shape returned by GET /incidents/map */
+export interface BackendMapMarker {
+  id: string
+  slug: string
+  title?: string | null
+  severity: BackendSeverity
+  evType?: "Accident" | "Incident" | null
+  incidentDate: string
+  latitude: number
+  longitude: number
+  fatalities: number
+  city?: string | null
+  country?: string | null
+}
+
 export interface BackendIncident {
   id: string
   ntsbEventId?: string | null
@@ -58,6 +85,7 @@ export interface BackendIncident {
   summary?: string | null
   aiLessonsLearned?: string | null
   aircraft: BackendIncidentAircraft[]
+  tags?: BackendTag[]
   _count?: BackendIncidentCount
 }
 

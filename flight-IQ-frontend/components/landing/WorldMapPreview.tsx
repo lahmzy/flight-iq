@@ -5,7 +5,9 @@ import { motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 
 import { SectionLabel } from "@/components/ui/SectionLabel"
-import { incidents } from "@/lib/landing-data"
+import { useGetRequest } from "@/hooks/useGetRequest"
+import type { BackendApiResponse } from "@/types/api"
+import type { BackendMapMarker } from "@/types/incident"
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -42,8 +44,23 @@ const markerPop = {
   }),
 }
 
+function severityColor(severity: string) {
+  if (severity === "Fatal") return "#EF4444"
+  if (severity === "Major") return "#F97316"
+  if (severity === "Moderate") return "#F59E0B"
+  return "#10B981"
+}
+
 export function WorldMapPreview() {
-  const mapIncidents = incidents.slice(0, 8)
+  const { data } = useGetRequest<BackendApiResponse<BackendMapMarker[]>>({
+    url: "/incidents/map?limit=60",
+    queryKey: ["map_markers"],
+  })
+
+  // Use up to 12 markers with valid coordinates from the live response
+  const markers: BackendMapMarker[] = (data?.data ?? [])
+    .filter((m) => m.latitude !== 0 && m.longitude !== 0)
+    .slice(0, 12)
 
   return (
     <section className="mx-auto max-w-7xl px-6 pb-28">
@@ -57,7 +74,7 @@ export function WorldMapPreview() {
         <SectionLabel
           eyebrow="Global Coverage"
           title="Incident Map"
-          subtitle="Real-time incident markers from aviation authorities worldwide"
+          subtitle="NTSB accident and incident locations across the United States"
         />
       </motion.div>
 
@@ -110,76 +127,21 @@ export function WorldMapPreview() {
           viewBox="0 0 800 320"
           preserveAspectRatio="none"
         >
-          <ellipse
-            cx="170"
-            cy="140"
-            rx="90"
-            ry="70"
-            fill="rgba(59,130,246,0.06)"
-            stroke="rgba(59,130,246,0.15)"
-            strokeWidth="1"
-          />
-          <ellipse
-            cx="220"
-            cy="240"
-            rx="45"
-            ry="55"
-            fill="rgba(59,130,246,0.06)"
-            stroke="rgba(59,130,246,0.15)"
-            strokeWidth="1"
-          />
-          <ellipse
-            cx="410"
-            cy="105"
-            rx="50"
-            ry="35"
-            fill="rgba(59,130,246,0.06)"
-            stroke="rgba(59,130,246,0.15)"
-            strokeWidth="1"
-          />
-          <ellipse
-            cx="420"
-            cy="200"
-            rx="55"
-            ry="70"
-            fill="rgba(59,130,246,0.06)"
-            stroke="rgba(59,130,246,0.15)"
-            strokeWidth="1"
-          />
-          <ellipse
-            cx="580"
-            cy="120"
-            rx="110"
-            ry="70"
-            fill="rgba(59,130,246,0.06)"
-            stroke="rgba(59,130,246,0.15)"
-            strokeWidth="1"
-          />
-          <ellipse
-            cx="660"
-            cy="240"
-            rx="55"
-            ry="35"
-            fill="rgba(59,130,246,0.06)"
-            stroke="rgba(59,130,246,0.15)"
-            strokeWidth="1"
-          />
+          <ellipse cx="170" cy="140" rx="90" ry="70" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
+          <ellipse cx="220" cy="240" rx="45" ry="55" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
+          <ellipse cx="410" cy="105" rx="50" ry="35" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
+          <ellipse cx="420" cy="200" rx="55" ry="70" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
+          <ellipse cx="580" cy="120" rx="110" ry="70" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
+          <ellipse cx="660" cy="240" rx="55" ry="35" fill="rgba(59,130,246,0.06)" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
         </svg>
 
-        {mapIncidents.map((inc, i) => {
-          const x = ((inc.lng + 180) / 360) * 100
-          const y = ((90 - inc.lat) / 180) * 100
-          const color =
-            inc.severity === "Fatal"
-              ? "#EF4444"
-              : inc.severity === "Major"
-                ? "#F97316"
-                : inc.severity === "Moderate"
-                  ? "#F59E0B"
-                  : "#10B981"
+        {markers.map((marker, i) => {
+          const x = ((marker.longitude + 180) / 360) * 100
+          const y = ((90 - marker.latitude) / 180) * 100
+          const color = severityColor(marker.severity)
           return (
             <motion.div
-              key={inc.id}
+              key={marker.id}
               className="absolute"
               style={{
                 left: `${x}%`,
@@ -191,25 +153,28 @@ export function WorldMapPreview() {
               whileInView="visible"
               viewport={{ once: true }}
               variants={markerPop}
+              title={marker.title ?? marker.city ?? "NTSB Incident"}
             >
-              <div className="relative">
-                <div
-                  className="absolute inset-0 animate-ping rounded-full"
-                  style={{
-                    background: color,
-                    opacity: 0.4,
-                    width: 10,
-                    height: 10,
-                  }}
-                />
-                <div
-                  className="h-2.5 w-2.5 rounded-full border border-white/40 shadow-lg"
-                  style={{
-                    background: color,
-                    boxShadow: `0 0 8px ${color}`,
-                  }}
-                />
-              </div>
+              <Link href={`/incident/${marker.slug}`}>
+                <div className="relative cursor-pointer">
+                  <div
+                    className="absolute inset-0 animate-ping rounded-full"
+                    style={{
+                      background: color,
+                      opacity: 0.4,
+                      width: 10,
+                      height: 10,
+                    }}
+                  />
+                  <div
+                    className="h-2.5 w-2.5 rounded-full border border-white/40 shadow-lg transition-transform hover:scale-150"
+                    style={{
+                      background: color,
+                      boxShadow: `0 0 8px ${color}`,
+                    }}
+                  />
+                </div>
+              </Link>
             </motion.div>
           )
         })}
@@ -241,6 +206,11 @@ export function WorldMapPreview() {
               </span>
             </div>
           ))}
+          {markers.length > 0 && (
+            <span className="mono" style={{ color: "#475569", fontSize: "0.65rem" }}>
+              · {markers.length} incidents shown
+            </span>
+          )}
         </motion.div>
 
         <motion.div
@@ -262,3 +232,4 @@ export function WorldMapPreview() {
     </section>
   )
 }
+

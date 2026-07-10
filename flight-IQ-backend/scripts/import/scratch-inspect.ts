@@ -13,6 +13,11 @@ const COL = {
   ev_state: 8,
   ev_country: 9,
   apt_name: 18,
+  // Casualty totals (from NTSB data dictionary)
+  inj_tot_f: 56,  // total fatalities
+  inj_tot_s: 57,  // total serious injuries
+  inj_tot_m: 58,  // total minor injuries
+  inj_tot_n: 59,  // total uninjured
 } as const;
 
 // NTSB files typically have no header row, so we map columns by index.
@@ -24,6 +29,9 @@ interface IncidentRow {
   slug: string;
   evType?: EvType;
   severity: Severity;
+  fatalities: number;
+  injuries: number;
+  occupants: number;
   incidentDate: Date;
   city?: string;
   state?: string;
@@ -31,6 +39,22 @@ interface IncidentRow {
   aptName?: string;
   latitude?: number;
   longitude?: number;
+}
+
+/**
+ * Derive a Severity enum value from NTSB casualty totals.
+ * - Any fatality → Fatal
+ * - Any serious injury → Major
+ * - Any minor injury → Moderate (downgrade from Major since no serious injuries)
+ * - ACC type with no injuries → Minor (aircraft damage likely, but survivable)
+ * - INC type → Minor by default
+ */
+function deriveSeverity(fatalities: number, seriousInjuries: number, minorInjuries: number, evType?: EvType): Severity {
+  if (fatalities > 0) return Severity.Fatal;
+  if (seriousInjuries > 0) return Severity.Major;
+  if (minorInjuries > 0) return Severity.Moderate;
+  // Accidents with no injuries are still Minor (property/aircraft damage)
+  return Severity.Minor;
 }
 
 const mapRow = (record: Record<string, string>) => {
@@ -70,12 +94,21 @@ const mapRow = (record: Record<string, string>) => {
     }
   }
 
+  const fatalities = parseInt(record[`c_${COL.inj_tot_f}`]?.trim() || '0', 10) || 0;
+  const seriousInjuries = parseInt(record[`c_${COL.inj_tot_s}`]?.trim() || '0', 10) || 0;
+  const minorInjuries = parseInt(record[`c_${COL.inj_tot_m}`]?.trim() || '0', 10) || 0;
+  const uninjured = parseInt(record[`c_${COL.inj_tot_n}`]?.trim() || '0', 10) || 0;
+  const occupants = fatalities + seriousInjuries + minorInjuries + uninjured;
+
   const data: IncidentRow = {
     ntsbEventId: evId,
     ntsbNo: ntsbNo || undefined,
     slug: `ntsb-${evId.toLowerCase()}`,
     evType,
-    severity: Severity.Minor, // Default severity as it is required
+    severity: deriveSeverity(fatalities, seriousInjuries, minorInjuries, evType),
+    fatalities,
+    injuries: seriousInjuries + minorInjuries,
+    occupants: occupants || 0,
     incidentDate,
     city: record[`c_${COL.ev_city}`]?.trim() || undefined,
     state: record[`c_${COL.ev_state}`]?.trim() || undefined,
@@ -97,6 +130,10 @@ const batchHandler = async (prisma: PrismaClient, rows: IncidentRow[]) => {
           update: {
             ntsbNo: row.ntsbNo,
             evType: row.evType,
+            severity: row.severity,
+            fatalities: row.fatalities,
+            injuries: row.injuries,
+            occupants: row.occupants,
             incidentDate: row.incidentDate,
             city: row.city,
             state: row.state,
@@ -111,6 +148,9 @@ const batchHandler = async (prisma: PrismaClient, rows: IncidentRow[]) => {
             slug: row.slug,
             evType: row.evType,
             severity: row.severity,
+            fatalities: row.fatalities,
+            injuries: row.injuries,
+            occupants: row.occupants,
             status: InvestigationStatus.UnderInvestigation,
             incidentDate: row.incidentDate,
             city: row.city,

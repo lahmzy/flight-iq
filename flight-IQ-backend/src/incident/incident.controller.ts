@@ -38,6 +38,14 @@ export class IncidentController {
     return this.incidentService.getAllIncidents(query);
   }
 
+  // ── Map markers (must be before :slug to avoid route conflict) ─────────────
+  @Get('map')
+  @CacheTTL(5 * 60 * 1000)
+  async getMapMarkers(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? Math.min(parseInt(limit, 10) || 200, 500) : 200;
+    return this.incidentService.getMapMarkers(parsedLimit);
+  }
+
   // ── Detail by slug ──────────────────────────────────────────────────────
   @Get(':slug')
   @CacheTTL(5 * 60 * 1000)

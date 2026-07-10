@@ -263,4 +263,8 @@ export class GetIncidentsQueryDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc';
+
+  @IsOptional()
+  @Type(() => Boolean)
+  hasCoordinates?: boolean;
 }

@@ -29,6 +29,7 @@ const ALLOWED_SORT_COLUMNS = new Set([
 /** Lightweight relations returned in list queries */
 const listInclude = {
   aircraft: { include: { aircraft: true } },
+  tags: { include: { tag: true } },
   _count: { select: { tags: true, comments: true } },
 } satisfies Prisma.IncidentInclude;
 
@@ -157,6 +158,12 @@ export class IncidentService {
       };
     }
 
+    // Has coordinates filter
+    if (query.hasCoordinates) {
+      where.latitude = { not: null };
+      where.longitude = { not: null };
+    }
+
     // Full-text search across title, summary, officialCause
     if (query.q) {
       const q = query.q.trim();
@@ -194,6 +201,37 @@ export class IncidentService {
         totalPages: Math.ceil(total / limit) || 1,
       },
     };
+  }
+
+  // ── Map Markers ──────────────────────────────────────────────────
+
+  /**
+   * Returns the minimal fields needed to render incident markers on a map.
+   * Only includes records that have both latitude and longitude.
+   */
+  async getMapMarkers(limit = 200) {
+    const markers = await this.prisma.incident.findMany({
+      where: {
+        latitude: { not: null },
+        longitude: { not: null },
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        severity: true,
+        evType: true,
+        incidentDate: true,
+        latitude: true,
+        longitude: true,
+        fatalities: true,
+        city: true,
+        country: true,
+      },
+      orderBy: { incidentDate: 'desc' },
+      take: limit,
+    });
+    return markers;
   }
 
   // ── Find By Slug ──────────────────────────────────────────────────────────

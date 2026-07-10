@@ -15,13 +15,11 @@ export type Status =
   | "Final Report"
   | "Closed"
 export type Cause =
-  | "Pilot Error"
-  | "Weather"
-  | "Mechanical Failure"
-  | "Bird Strike"
-  | "Fuel Issues"
-  | "Maintenance"
-  | "ATC Error"
+  | "Personnel"
+  | "Environmental"
+  | "Aircraft"
+  | "Organization"
+  | "Other"
 
 export interface Incident {
   id: string
@@ -344,13 +342,11 @@ export const causeCategories: {
   color: string
   icon: LucideIcon
 }[] = [
-  { name: "Pilot Error", count: 1247, color: "#EF4444", icon: AlertTriangle },
-  { name: "Weather", count: 892, color: "#3B82F6", icon: Cloud },
-  { name: "Mechanical Failure", count: 1056, color: "#8B5CF6", icon: Wrench },
-  { name: "Bird Strike", count: 423, color: "#10B981", icon: Bird },
-  { name: "Fuel Issues", count: 267, color: "#F59E0B", icon: Fuel },
-  { name: "Maintenance", count: 534, color: "#06B6D4", icon: Wrench },
-  { name: "ATC Error", count: 189, color: "#EC4899", icon: Radio },
+  { name: "Personnel", count: 1247, color: "#EF4444", icon: AlertTriangle },
+  { name: "Environmental", count: 892, color: "#3B82F6", icon: Cloud },
+  { name: "Aircraft", count: 1056, color: "#8B5CF6", icon: Wrench },
+  { name: "Organization", count: 423, color: "#10B981", icon: Radio },
+  { name: "Other", count: 267, color: "#F59E0B", icon: AlertTriangle },
 ]
 
 export const annualStats = [

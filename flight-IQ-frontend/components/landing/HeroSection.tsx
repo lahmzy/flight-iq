@@ -96,9 +96,8 @@ export function HeroSection() {
           className="mb-12 max-w-xl text-center"
           style={{ color: "#64748B", fontSize: "1.125rem", lineHeight: 1.7 }}
         >
-          FlightIQ aggregates worldwide aviation incident reports, investigation
-          timelines, and causal analyses from regulators including NTSB, AAIB,
-          ATSB, and BEA.
+          Explore NTSB aviation accident and incident records. FlightIQ aggregates investigation
+          timelines and causal analyses to help you understand every event.
         </motion.p>
 
         <motion.form

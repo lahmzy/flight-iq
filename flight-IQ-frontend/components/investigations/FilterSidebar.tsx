@@ -13,13 +13,11 @@ const STATUSES: Status[] = [
   "Closed",
 ]
 const CAUSES: Cause[] = [
-  "Pilot Error",
-  "Weather",
-  "Mechanical Failure",
-  "Bird Strike",
-  "Fuel Issues",
-  "Maintenance",
-  "ATC Error",
+  "Personnel",
+  "Environmental",
+  "Aircraft",
+  "Organization",
+  "Other",
 ]
 
 function severityColor(s: Severity) {
@@ -181,7 +179,7 @@ export function FilterSidebar({
         />
 
         <FilterGroup
-          label="Cause"
+          label="Finding Category"
           items={CAUSES}
           selected={selectedCauses}
           onToggle={onToggleCause}
