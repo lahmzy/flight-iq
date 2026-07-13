@@ -40,7 +40,7 @@ import { PrismaClient } from '../../prisma/generated/prisma/client';
         ELSE                     'Minor'::"Severity"
       END
       WHERE severity = 'Minor'::"Severity"
-        AND (fatalities > 0 OR injuries > 0)
+        AND (fatalities > 0 OR injuries > 0) 
     `);
 
     console.log(`✅ Updated severity on ${updated} records based on stored fatalities/injuries.`);

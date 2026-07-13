@@ -11,7 +11,7 @@ import {
   Max,
   MaxLength,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   Severity,
   InvestigationStatus,
@@ -233,12 +233,14 @@ export class GetIncidentsQueryDto {
   q?: string;
 
   @IsOptional()
-  @IsEnum(Severity)
-  severity?: Severity;
+  @Transform(({ value }) => (Array.isArray(value) ? value : value.split(',')))
+  @IsEnum(Severity, { each: true })
+  severity?: Severity[];
 
   @IsOptional()
-  @IsEnum(InvestigationStatus)
-  status?: InvestigationStatus;
+  @Transform(({ value }) => (Array.isArray(value) ? value : value.split(',')))
+  @IsEnum(InvestigationStatus, { each: true })
+  status?: InvestigationStatus[];
 
   @IsOptional()
   @IsString()

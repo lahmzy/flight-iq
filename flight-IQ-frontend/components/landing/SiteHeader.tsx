@@ -97,7 +97,7 @@ export function SiteHeader() {
             ● LIVE
           </span>
           <Link
-            href="/investigations"
+            href="/incident"
             className="rounded-lg px-4 py-2 transition-all duration-200 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]"
             style={{
               background: "#3B82F6",

@@ -137,8 +137,8 @@ export class IncidentService {
     // --- where --------------------------------------------------------------
     const where: Prisma.IncidentWhereInput = {};
 
-    if (query.severity) where.severity = query.severity;
-    if (query.status) where.status = query.status;
+    if (query.severity) where.severity = { in: query.severity };
+    if (query.status) where.status = { in: query.status };
     if (query.country) where.country = query.country;
     if (query.aircraftId) {
       where.aircraft = {
@@ -164,13 +164,16 @@ export class IncidentService {
       where.longitude = { not: null };
     }
 
-    // Full-text search across title, summary, officialCause
+    // Full-text search across title, summary, officialCause, city, state, country
     if (query.q) {
       const q = query.q.trim();
       where.OR = [
         { title: { contains: q, mode: 'insensitive' } },
         { summary: { contains: q, mode: 'insensitive' } },
         { officialCause: { contains: q, mode: 'insensitive' } },
+        { city: { contains: q, mode: 'insensitive' } },
+        { state: { contains: q, mode: 'insensitive' } },
+        { country: { contains: q, mode: 'insensitive' } },
       ];
     }
 

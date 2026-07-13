@@ -38,14 +38,65 @@ export function formatAircraftName(
   return name.length > 0 ? name.join(" ") : "Unknown aircraft"
 }
 
+/** Title-cases a string: "AMERICAN AIRLINES" → "American Airlines" */
+function toTitleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
+}
+
 export function incidentTitle(incident: BackendIncident): string {
+  // Use stored title if present
+  if (incident.title?.trim()) return incident.title.trim()
+
+  // Pull primary aircraft data (it's already on the incident object in list responses)
+  const primary =
+    incident.aircraft?.find((a) => a.isPrimary) ?? incident.aircraft?.[0]
+  const ac = primary?.aircraft
+
+  const operator = ac?.operatorName?.trim()
+    ? toTitleCase(ac.operatorName.trim())
+    : null
+  const flight = ac?.flightNumber?.trim() || null
+  const make = ac?.make?.trim() ? toTitleCase(ac.make.trim()) : null
+  const model = ac?.model?.trim() ? toTitleCase(ac.model.trim()) : null
+  const evType = incident.evType ?? "Accident"
+  const location = [incident.city?.trim(), incident.state?.trim()]
+    .filter(Boolean)
+    .join(", ")
+
+  // "American Airlines 1077 — Accident, Austin, TX"
+  if (operator && flight) {
+    const base = `${operator} ${flight} — ${evType}`
+    return location ? `${base}, ${location}` : base
+  }
+
+  // "American Airlines — Accident, Austin, TX"
+  if (operator) {
+    const base = `${operator} — ${evType}`
+    return location ? `${base}, ${location}` : base
+  }
+
+  // "Cessna 172 — Accident, Austin, TX"
+  if (make) {
+    const acftName = model ? `${make} ${model}` : make
+    const base = `${acftName} — ${evType}`
+    return location ? `${base}, ${location}` : base
+  }
+
+  // "Accident — Austin, TX"
+  if (location) return `${evType} — ${location}`
+
+  // Last resort: NTSB identifiers
   return (
-    incident.title?.trim() ||
     incident.ntsbNo?.trim() ||
     incident.ntsbEventId?.trim() ||
     "Untitled NTSB incident"
   )
 }
+
 
 function formatStatus(status: BackendInvestigationStatus): Status {
   switch (status) {

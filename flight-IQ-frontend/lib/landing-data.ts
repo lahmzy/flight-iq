@@ -379,11 +379,11 @@ export const heroStats = [
 ] as const
 
 export const quickTags = [
-  "Boeing 737 MAX",
-  "Bird Strike",
-  "NTSB",
-  "Fuel Exhaustion",
-  "CFIT",
+  "Personnel",
+  "Environmental",
+  "Aircraft",
+  "Organization",
+  "Other",
 ] as const
 
 export const navLinks = [

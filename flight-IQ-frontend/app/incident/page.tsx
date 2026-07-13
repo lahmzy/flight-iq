@@ -3,14 +3,19 @@
 import { useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { Search, SlidersHorizontal, X } from "lucide-react"
+import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react"
 
 import { FilterSidebar } from "@/components/investigations/FilterSidebar"
 import { InvestigationCard } from "@/components/investigations/InvestigationCard"
 import { Pagination } from "@/components/investigations/Pagination"
 import { GlassCard } from "@/components/ui/GlassCard"
 import type { Cause, Severity, Status } from "@/lib/landing-data"
-import { incidents } from "@/lib/landing-data"
+
+import { useGetRequest } from "@/hooks/useGetRequest"
+import { useDebounce } from "@/hooks/useDebounce"
+import type { BackendApiResponse } from "@/types/api"
+import type { BackendIncidentList } from "@/types/incident"
+import { mapBackendIncidentToDisplay } from "@/lib/incident-display"
 
 const PER_PAGE = 6
 
@@ -33,7 +38,8 @@ export default function InvestigationsPage() {
   const initialQ = searchParams.get("q") ?? ""
   const initialCause = searchParams.get("cause") ?? ""
 
-  const [query, setQuery] = useState(initialQ)
+  const [searchTerm, setSearchTerm] = useState(initialQ)
+  const debouncedQuery = useDebounce(searchTerm, 400)
   const [selectedSeverities, setSelectedSeverities] = useState<Severity[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<Status[]>([])
   const [selectedCauses, setSelectedCauses] = useState<Cause[]>(
@@ -42,33 +48,31 @@ export default function InvestigationsPage() {
   const [page, setPage] = useState(1)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
-  const filtered = useMemo(() => {
-    return incidents.filter((inc) => {
-      const q = query.toLowerCase()
-      const matchQ =
-        !q ||
-        inc.title.toLowerCase().includes(q) ||
-        inc.aircraft.toLowerCase().includes(q) ||
-        inc.location.toLowerCase().includes(q) ||
-        inc.airline.toLowerCase().includes(q) ||
-        inc.country.toLowerCase().includes(q) ||
-        inc.flightNumber.toLowerCase().includes(q) ||
-        inc.registration.toLowerCase().includes(q)
+  const searchParamsObj = new URLSearchParams({
+    page: page.toString(),
+    limit: PER_PAGE.toString(),
+  })
+  if (debouncedQuery) searchParamsObj.set("q", debouncedQuery)
+  if (selectedSeverities.length > 0) searchParamsObj.set("severity", selectedSeverities.join(","))
+  if (selectedStatuses.length > 0) searchParamsObj.set("status", selectedStatuses.join(","))
 
-      const matchSev =
-        !selectedSeverities.length || selectedSeverities.includes(inc.severity)
-      const matchStat =
-        !selectedStatuses.length || selectedStatuses.includes(inc.status)
-      const matchCause =
-        !selectedCauses.length ||
-        inc.causes.some((c) => selectedCauses.includes(c as Cause))
+  const { data, isLoading } = useGetRequest<BackendApiResponse<BackendIncidentList>>({
+    url: `/incidents?${searchParamsObj.toString()}`,
+    queryKey: [
+      "incidents",
+      page,
+      debouncedQuery,
+      selectedSeverities,
+      selectedStatuses,
+      selectedCauses,
+    ],
+  })
 
-      return matchQ && matchSev && matchStat && matchCause
-    })
-  }, [query, selectedSeverities, selectedStatuses, selectedCauses])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
-  const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+  const backendIncidents = data?.data?.data || []
+  const paged = backendIncidents.map(mapBackendIncidentToDisplay)
+  const meta = data?.data?.meta
+  const totalCount = meta?.total || 0
+  const totalPages = meta?.totalPages || 1
 
   const toggle = <T,>(arr: T[], setArr: (a: T[]) => void, item: T) => {
     setArr(arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item])
@@ -79,7 +83,7 @@ export default function InvestigationsPage() {
     setSelectedSeverities([])
     setSelectedStatuses([])
     setSelectedCauses([])
-    setQuery("")
+    setSearchTerm("")
     setPage(1)
   }
 
@@ -118,7 +122,7 @@ export default function InvestigationsPage() {
           variants={fadeUp}
           style={{ color: "#64748B", fontSize: "0.9375rem" }}
         >
-          {filtered.length} {filtered.length === 1 ? "result" : "results"} ·
+          {totalCount} {totalCount === 1 ? "result" : "results"} ·
           worldwide aviation incident reports
         </motion.p>
       </motion.div>
@@ -157,9 +161,9 @@ export default function InvestigationsPage() {
             />
             <input
               type="text"
-              value={query}
+              value={searchTerm}
               onChange={(e) => {
-                setQuery(e.target.value)
+                setSearchTerm(e.target.value)
                 setPage(1)
               }}
               placeholder="Search by aircraft, airline, location, registration…"
@@ -172,10 +176,10 @@ export default function InvestigationsPage() {
                 outline: "none",
               }}
             />
-            {query && (
+            {searchTerm && (
               <button
                 onClick={() => {
-                  setQuery("")
+                  setSearchTerm("")
                   setPage(1)
                 }}
                 className="absolute top-1/2 right-4 -translate-y-1/2"
@@ -204,8 +208,8 @@ export default function InvestigationsPage() {
               className="mono"
               style={{ color: "#475569", fontSize: "0.72rem" }}
             >
-              Showing {(page - 1) * PER_PAGE + 1}–
-              {Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
+              Showing {(page - 1) * PER_PAGE + (totalCount > 0 ? 1 : 0)}–
+              {Math.min(page * PER_PAGE, totalCount)} of {totalCount}
             </span>
           </div>
 
@@ -214,9 +218,14 @@ export default function InvestigationsPage() {
             initial="hidden"
             animate="visible"
             variants={stagger}
-            key={page + query + selectedSeverities.join(",") + selectedStatuses.join(",") + selectedCauses.join(",")}
+            key={page + debouncedQuery + selectedSeverities.join(",") + selectedStatuses.join(",") + selectedCauses.join(",")}
           >
-            {paged.length === 0 ? (
+            {isLoading ? (
+              <GlassCard hover={false} className="py-16 text-center">
+                <Loader2 className="mx-auto mb-4 animate-spin text-blue-500" size={32} />
+                <p style={{ color: "#64748B" }}>Loading investigations...</p>
+              </GlassCard>
+            ) : paged.length === 0 ? (
               <GlassCard hover={false} className="py-16 text-center">
                 <p style={{ color: "#64748B" }}>
                   No investigations match your filters.
