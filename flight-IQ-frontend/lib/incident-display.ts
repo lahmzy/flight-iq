@@ -98,7 +98,7 @@ export function incidentTitle(incident: BackendIncident): string {
 }
 
 
-function formatStatus(status: BackendInvestigationStatus): Status {
+export function formatStatus(status: BackendInvestigationStatus): Status {
   switch (status) {
     case "UnderInvestigation":
       return "Under Investigation"

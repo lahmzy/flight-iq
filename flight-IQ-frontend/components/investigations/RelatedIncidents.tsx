@@ -1,62 +1,55 @@
-import Link from "next/link"
+"use client"
+
+import { Loader2 } from "lucide-react"
 
 import { GlassCard } from "@/components/ui/GlassCard"
-import type { Incident } from "@/lib/landing-data"
+import { SectionLabel } from "@/components/ui/SectionLabel"
+import { InvestigationCard } from "@/components/investigations/InvestigationCard"
+import { useGetRequest } from "@/hooks/useGetRequest"
+import type { BackendApiResponse } from "@/types/api"
+import type { BackendIncidentList, BackendSeverity } from "@/types/incident"
+import { mapBackendIncidentToDisplay } from "@/lib/incident-display"
 
-export function RelatedIncidents({
-  incidents,
-}: {
-  incidents: Incident[]
-}) {
+interface RelatedIncidentsProps {
+  currentSlug: string
+  severity: BackendSeverity
+  country?: string | null
+}
+
+export function RelatedIncidents({ currentSlug, severity, country }: RelatedIncidentsProps) {
+  const params = new URLSearchParams({ limit: "4", severity })
+  if (country) params.set("country", country)
+
+  const { data, isLoading } = useGetRequest<BackendApiResponse<BackendIncidentList>>({
+    url: `/incidents?${params.toString()}`,
+    queryKey: ["related-incidents", currentSlug, severity, country],
+  })
+
+  const incidents =
+    data?.data?.data
+      ?.filter((i) => i.slug !== currentSlug)
+      .slice(0, 3)
+      .map(mapBackendIncidentToDisplay) ?? []
+
+  if (!isLoading && incidents.length === 0) return null
+
   return (
     <GlassCard hover={false}>
-      <p
-        style={{
-          fontFamily: "var(--font-heading)",
-          fontWeight: 600,
-          fontSize: "0.9375rem",
-          color: "#E2E8F0",
-          marginBottom: "1rem",
-        }}
-      >
-        Related Incidents
-      </p>
-      <div className="space-y-3">
-        {incidents.map((r) => (
-          <Link key={r.id} href={`/investigations/${r.id}`}>
-            <div
-              className="group cursor-pointer rounded-lg p-3 transition-all hover:border-blue-500/20"
-              style={{
-                background: "rgba(255,255,255,0.025)",
-                border: "1px solid rgba(255,255,255,0.05)",
-              }}
-            >
-              <p
-                className="transition-colors group-hover:text-blue-400"
-                style={{
-                  color: "#CBD5E1",
-                  fontSize: "0.8125rem",
-                  fontWeight: 500,
-                  lineHeight: 1.4,
-                }}
-              >
-                {r.title}
-              </p>
-              <p
-                className="mono mt-1"
-                style={{ color: "#475569", fontSize: "0.65rem" }}
-              >
-                {r.aircraft} ·{" "}
-                {new Date(r.date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </p>
-            </div>
-          </Link>
-        ))}
+      <div className="mb-5">
+        <SectionLabel eyebrow="Similar Incidents" title="Related Investigations" />
       </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 size={20} className="animate-spin" style={{ color: "#3B82F6" }} />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {incidents.map((inc) => (
+            <InvestigationCard key={inc.id} incident={inc} />
+          ))}
+        </div>
+      )}
     </GlassCard>
   )
 }

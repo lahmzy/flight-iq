@@ -1,10 +1,65 @@
-import { Plane } from "lucide-react"
+import { MapPin, Plane } from "lucide-react"
 
 import { GlassCard } from "@/components/ui/GlassCard"
 import { SectionLabel } from "@/components/ui/SectionLabel"
-import type { Incident } from "@/lib/landing-data"
+import type { BackendIncidentDetail } from "@/types/incident"
 
-export function FlightRoute({ incident }: { incident: Incident }) {
+// ── Location card (when no route data) ────────────────────────────────────────
+
+function LocationCard({ incident }: { incident: BackendIncidentDetail }) {
+  const placeName =
+    incident.aptName?.trim() ||
+    [incident.city, incident.state, incident.country].filter(Boolean).join(", ") ||
+    "Unknown location"
+
+  const hasCoords =
+    incident.latitude != null && incident.longitude != null
+
+  return (
+    <GlassCard hover={false}>
+      <SectionLabel eyebrow="Incident Location" title="Location" />
+      <div
+        className="mt-6 flex items-start gap-4 rounded-xl p-4"
+        style={{ background: "rgba(59,130,246,0.04)", border: "1px solid rgba(59,130,246,0.12)" }}
+      >
+        <div
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
+          style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)" }}
+        >
+          <MapPin size={18} style={{ color: "#3B82F6" }} />
+        </div>
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--font-heading)",
+              fontWeight: 600,
+              fontSize: "1.05rem",
+              color: "#E2E8F0",
+              lineHeight: 1.3,
+            }}
+          >
+            {placeName}
+          </p>
+          {hasCoords && (
+            <p
+              className="mono mt-1.5"
+              style={{ color: "#475569", fontSize: "0.72rem" }}
+            >
+              {incident.latitude!.toFixed(4)}° N, {incident.longitude!.toFixed(4)}° E
+            </p>
+          )}
+        </div>
+      </div>
+    </GlassCard>
+  )
+}
+
+// ── Route diagram (when departure + destination are present) ──────────────────
+
+function RouteCard({ incident }: { incident: BackendIncidentDetail }) {
+  const primaryAircraft = incident.aircraft.find((a) => a.isPrimary) ?? incident.aircraft[0]
+  const flightNumber = primaryAircraft?.aircraft.flightNumber?.trim()
+
   return (
     <GlassCard hover={false}>
       <SectionLabel eyebrow="Route" title="Flight Route" />
@@ -22,15 +77,14 @@ export function FlightRoute({ incident }: { incident: Incident }) {
             {incident.departureAirport}
           </div>
           <div style={{ color: "#64748B", fontSize: "0.8rem", marginTop: "0.25rem" }}>
-            {incident.flightNumber} Departure
+            {flightNumber ? `${flightNumber} Departure` : "Departure"}
           </div>
         </div>
+
         <div className="relative mx-4 flex-1">
           <div
             className="h-px"
-            style={{
-              background: "linear-gradient(90deg, #3B82F6, #8B5CF6)",
-            }}
+            style={{ background: "linear-gradient(90deg, #3B82F6, #8B5CF6)" }}
           />
           <div
             className="absolute top-1/2 left-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
@@ -39,25 +93,10 @@ export function FlightRoute({ incident }: { incident: Incident }) {
               border: "1px solid rgba(59,130,246,0.3)",
             }}
           >
-            <Plane
-              size={14}
-              style={{ color: "#3B82F6", transform: "rotate(45deg)" }}
-            />
-          </div>
-          <div
-            className="mono absolute top-1/2 -translate-y-1/2 rounded px-2 py-0.5"
-            style={{
-              right: "25%",
-              background: "rgba(239,68,68,0.12)",
-              border: "1px solid rgba(239,68,68,0.25)",
-              color: "#EF4444",
-              fontSize: "0.62rem",
-              transform: "translateY(-200%)",
-            }}
-          >
-            ✕ EMERGENCY
+            <Plane size={14} style={{ color: "#3B82F6", transform: "rotate(45deg)" }} />
           </div>
         </div>
+
         <div className="text-center">
           <div
             style={{
@@ -71,21 +110,17 @@ export function FlightRoute({ incident }: { incident: Incident }) {
             {incident.destinationAirport}
           </div>
           <div style={{ color: "#64748B", fontSize: "0.8rem", marginTop: "0.25rem" }}>
-            Original Destination
+            Destination
           </div>
         </div>
       </div>
-      <div
-        className="mono mt-6 rounded-xl p-4"
-        style={{
-          background: "rgba(249,115,22,0.06)",
-          border: "1px solid rgba(249,115,22,0.15)",
-          color: "#F97316",
-          fontSize: "0.72rem",
-        }}
-      >
-        ⚡ DIVERTED TO KDEN (Denver International) following engine failure
-      </div>
     </GlassCard>
   )
+}
+
+// ── Public export — picks the right variant ───────────────────────────────────
+
+export function FlightRoute({ incident }: { incident: BackendIncidentDetail }) {
+  const hasRoute = !!incident.departureAirport && !!incident.destinationAirport
+  return hasRoute ? <RouteCard incident={incident} /> : <LocationCard incident={incident} />
 }

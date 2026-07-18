@@ -15,6 +15,16 @@ export type BackendInvestigationStatus =
   | "FinalReport"
   | "Closed"
 
+// ── Aircraft ──────────────────────────────────────────────────────────────────
+
+export interface BackendAircraftNarrative {
+  narrativeAccp?: string | null  // preliminary/accident narrative — most detailed
+  narrativeAccf?: string | null  // final accident narrative
+  narrativeCause?: string | null // official probable cause statement
+  narrativeInc?: string | null   // incident narrative (INC-type events)
+}
+
+/** Aircraft shape returned in list queries */
 export interface BackendAircraft {
   id: string
   registrationNo?: string | null
@@ -27,6 +37,13 @@ export interface BackendAircraft {
   imageUrl?: string | null
 }
 
+/** Aircraft shape returned in detail queries (includes narrative) */
+export interface BackendAircraftDetail extends BackendAircraft {
+  ntsbCategory?: string | null
+  homebuilt?: boolean
+  narrative?: BackendAircraftNarrative | null
+}
+
 export interface BackendIncidentAircraft {
   aircraftId: string
   incidentId: string
@@ -34,6 +51,17 @@ export interface BackendIncidentAircraft {
   role?: string | null
   aircraft: BackendAircraft
 }
+
+/** IncidentAircraft with full aircraft detail (includes narrative) */
+export interface BackendIncidentAircraftDetail {
+  aircraftId: string
+  incidentId: string
+  isPrimary: boolean
+  role?: string | null
+  aircraft: BackendAircraftDetail
+}
+
+// ── Supporting types ──────────────────────────────────────────────────────────
 
 export interface BackendIncidentCount {
   tags?: number
@@ -43,6 +71,15 @@ export interface BackendIncidentCount {
 export interface BackendTag {
   tagId: string
   tag: { id: string; name: string; slug: string }
+}
+
+export interface BackendSource {
+  id: string
+  title: string
+  sourceName: string
+  url?: string | null
+  publishedDate?: string | null
+  isAvailable: boolean
 }
 
 /** Lightweight marker shape returned by GET /incidents/map */
@@ -60,6 +97,9 @@ export interface BackendMapMarker {
   country?: string | null
 }
 
+// ── Incident shapes ───────────────────────────────────────────────────────────
+
+/** Incident shape returned in list queries */
 export interface BackendIncident {
   id: string
   ntsbEventId?: string | null
@@ -87,6 +127,13 @@ export interface BackendIncident {
   aircraft: BackendIncidentAircraft[]
   tags?: BackendTag[]
   _count?: BackendIncidentCount
+}
+
+/** Incident shape returned in detail queries — includes narratives and sources */
+export interface BackendIncidentDetail extends Omit<BackendIncident, "aircraft"> {
+  aircraft: BackendIncidentAircraftDetail[]
+  sources: BackendSource[]
+  _count: BackendIncidentCount
 }
 
 export type BackendIncidentList = PaginatedResponse<BackendIncident>

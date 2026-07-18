@@ -1,11 +1,11 @@
 import { Users } from "lucide-react"
 
 import { GlassCard } from "@/components/ui/GlassCard"
-import type { Incident } from "@/lib/landing-data"
+import type { BackendIncidentDetail } from "@/types/incident"
 
-export function CasualtiesCard({ incident }: { incident: Incident }) {
+export function CasualtiesCard({ incident }: { incident: BackendIncidentDetail }) {
   const stats = [
-    { val: incident.occupants, label: "On Board", color: "#94A3B8" },
+    { val: incident.occupants ?? 0, label: "On Board", color: "#94A3B8" },
     { val: incident.injuries, label: "Injured", color: "#F59E0B" },
     {
       val: incident.fatalities,

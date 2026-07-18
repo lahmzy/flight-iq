@@ -35,11 +35,8 @@ const listInclude = {
 
 /** Full relations returned in detail queries */
 const detailInclude = {
-  aircraft: { include: { aircraft: true } },
+  aircraft: { include: { aircraft: { include: { narrative: true } } } },
   tags: { include: { tag: true } },
-  timelineEvents: { orderBy: { sortOrder: 'asc' as const } },
-  contributingFactors: { orderBy: { sortOrder: 'asc' as const } },
-  videos: true,
   sources: true,
   _count: { select: { comments: true } },
 } satisfies Prisma.IncidentInclude;
@@ -252,7 +249,11 @@ export class IncidentService {
     // Ensure images are populated for all aircraft
     for (const link of incident.aircraft) {
       if (link.aircraft) {
-        link.aircraft = await this.imageService.ensureAircraftImage(link.aircraft);
+        const narrative = link.aircraft.narrative;
+        link.aircraft = {
+          ...await this.imageService.ensureAircraftImage(link.aircraft),
+          narrative,
+        } as typeof link.aircraft;
       }
     }
 
@@ -274,7 +275,11 @@ export class IncidentService {
     // Ensure images are populated for all aircraft
     for (const link of incident.aircraft) {
       if (link.aircraft) {
-        link.aircraft = await this.imageService.ensureAircraftImage(link.aircraft);
+        const narrative = link.aircraft.narrative;
+        link.aircraft = {
+          ...await this.imageService.ensureAircraftImage(link.aircraft),
+          narrative,
+        } as typeof link.aircraft;
       }
     }
 

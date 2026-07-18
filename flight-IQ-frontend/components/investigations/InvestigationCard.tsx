@@ -11,7 +11,7 @@ import type { Incident } from "@/lib/landing-data"
 
 export function InvestigationCard({ incident }: { incident: Incident }) {
   return (
-    <Link href={`/investigations/${incident.id}`}>
+    <Link href={`/incident/${incident.id}`}>
       <GlassCard className="group" padding="p-5">
         <div className="flex items-start gap-5">
           <div className="min-w-0 flex-1">
