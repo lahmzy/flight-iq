@@ -63,39 +63,20 @@ const mapRow = (record: Record<string, string>) => {
   return { success: true as const, data };
 };
 
+let existingAircraftKeys: Set<string> | null = null;
+
 const batchHandler = async (prisma: PrismaClient, rows: FindingRow[]) => {
-  await prisma.$transaction(
-    async (tx) => {
-      // Execute sequentially to avoid exhausting the connection pool
-      for (const row of rows) {
-        await tx.finding.upsert({
-          where: {
-            ntsbEventId_ntsbAircraftKey_findingNo: {
-              ntsbEventId: row.ntsbEventId,
-              ntsbAircraftKey: row.ntsbAircraftKey,
-              findingNo: row.findingNo,
-            },
-          },
-          update: {
-            findingCode: row.findingCode,
-            description: row.description,
-            category: row.category,
-          },
-          create: {
-            ntsbEventId: row.ntsbEventId,
-            ntsbAircraftKey: row.ntsbAircraftKey,
-            findingNo: row.findingNo,
-            findingCode: row.findingCode,
-            description: row.description,
-            category: row.category,
-          },
-        });
-      }
-    },
-    {
-      timeout: 120000, // 2 minutes timeout
-    }
-  );
+  if (!existingAircraftKeys) {
+    const aircraft = await prisma.aircraft.findMany({
+      select: { ntsbEventId: true, ntsbAircraftKey: true },
+    });
+    existingAircraftKeys = new Set(aircraft.map(a => `${a.ntsbEventId}_${a.ntsbAircraftKey}`));
+  }
+
+  const valid = rows.filter(r => existingAircraftKeys!.has(`${r.ntsbEventId}_${r.ntsbAircraftKey}`));
+  if (valid.length === 0) return;
+
+  await prisma.finding.createMany({ data: valid, skipDuplicates: true });
 };
 
 (async () => {
@@ -106,7 +87,7 @@ const batchHandler = async (prisma: PrismaClient, rows: FindingRow[]) => {
     mapRow,
     batchHandler,
     {
-      chunkSize: 100,
+      chunkSize: 1000,
       parseOptions: {
         headers: HEADERS,
         discardUnmappedColumns: true,

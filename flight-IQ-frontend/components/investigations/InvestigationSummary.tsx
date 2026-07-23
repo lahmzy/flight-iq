@@ -63,8 +63,14 @@ interface NarrativeCardProps {
 }
 
 export function InvestigationSummary({ incident, narrative }: NarrativeCardProps) {
-  // Priority order for narrative body text
+  const findingsText = incident.aircraft
+    .flatMap((a) => a.aircraft.findings ?? [])
+    .map((f) => f.description?.trim())
+    .filter(Boolean)
+    .join("\n\n") || null
+
   const bodyText =
+    findingsText ||
     incident.summary?.trim() ||
     narrative?.narrativeAccp?.trim() ||
     narrative?.narrativeInc?.trim() ||

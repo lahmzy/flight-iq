@@ -28,7 +28,7 @@ const ALLOWED_SORT_COLUMNS = new Set([
 
 /** Lightweight relations returned in list queries */
 const listInclude = {
-  aircraft: { include: { aircraft: true } },
+  aircraft: { include: { aircraft: { include: { findings: true } } } },
   tags: { include: { tag: true } },
   _count: { select: { tags: true, comments: true } },
 } satisfies Prisma.IncidentInclude;
@@ -183,9 +183,9 @@ export class IncidentService {
       : 'incidentDate';
     const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
 
-    // Default: incidents with narrative content first, then by user sort
+    // Default: incidents with officialCause first, then by user sort
     const orderBy = [
-      { summary: { sort: 'desc', nulls: 'last' } },
+      { officialCause: { sort: 'desc', nulls: 'last' } },
       { [sortBy]: sortOrder },
     ] satisfies Prisma.IncidentOrderByWithRelationInput[];
 
