@@ -35,7 +35,7 @@ const listInclude = {
 
 /** Full relations returned in detail queries */
 const detailInclude = {
-  aircraft: { include: { aircraft: { include: { narrative: true } } } },
+  aircraft: { include: { aircraft: { include: { narrative: true, findings: true } } } },
   tags: { include: { tag: true } },
   sources: true,
   _count: { select: { comments: true } },
@@ -137,12 +137,15 @@ export class IncidentService {
     if (query.severity) where.severity = { in: query.severity };
     if (query.status) where.status = { in: query.status };
     if (query.country) where.country = query.country;
-    if (query.aircraftId) {
-      where.aircraft = {
-        some: {
-          aircraftId: query.aircraftId,
-        },
-      };
+    if (query.aircraftId || query.findingCategory) {
+      const aircraftAnd: any[] = [];
+      if (query.aircraftId) aircraftAnd.push({ aircraftId: query.aircraftId });
+      if (query.findingCategory) {
+        aircraftAnd.push({
+          aircraft: { findings: { some: { category: { in: query.findingCategory } } } },
+        });
+      }
+      where.aircraft = { some: { AND: aircraftAnd } };
     }
 
     // Date range
@@ -180,12 +183,18 @@ export class IncidentService {
       : 'incidentDate';
     const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
 
+    // Default: incidents with narrative content first, then by user sort
+    const orderBy = [
+      { summary: { sort: 'desc', nulls: 'last' } },
+      { [sortBy]: sortOrder },
+    ] satisfies Prisma.IncidentOrderByWithRelationInput[];
+
     // --- execute ------------------------------------------------------------
     const [data, total] = await Promise.all([
       this.prisma.incident.findMany({
         where,
         include: listInclude,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy,
         skip,
         take: limit,
       }),
@@ -257,6 +266,10 @@ export class IncidentService {
       }
     }
 
+    // Fallback: if aircraft array is empty and summary/officialCause are still
+    // null, look up AircraftNarrative directly by ntsbEventId
+    await this.applyNarrativeFallback(incident);
+
     return incident;
   }
 
@@ -283,7 +296,44 @@ export class IncidentService {
       }
     }
 
+    // Fallback: if aircraft array is empty and summary/officialCause are still
+    // null, look up AircraftNarrative directly by ntsbEventId
+    await this.applyNarrativeFallback(incident);
+
     return incident;
+  }
+
+  // ── Private Helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Fallback: if summary or officialCause are still null after the denormalisation
+   * script (06), query AircraftNarrative directly by ntsbEventId.
+   * Populates the fields in-memory only — no extra DB write.
+   */
+  private async applyNarrativeFallback(
+    incident: { ntsbEventId: string | null; aircraft: unknown[]; summary: string | null; officialCause: string | null },
+  ): Promise<void> {
+    // Both fields already populated — nothing to do
+    if (incident.summary && incident.officialCause) return;
+    if (!incident.ntsbEventId) return;
+
+    const narrative = await this.prisma.aircraftNarrative.findFirst({
+      where: { ntsbEventId: incident.ntsbEventId },
+      orderBy: { ntsbAircraftKey: 'asc' }, // Aircraft_Key = 1 first
+    });
+
+    if (!narrative) return;
+
+    if (!incident.summary) {
+      incident.summary =
+        narrative.narrativeAccp?.trim() ||
+        narrative.narrativeInc?.trim() ||
+        narrative.narrativeAccf?.trim() ||
+        null;
+    }
+    if (!incident.officialCause) {
+      incident.officialCause = narrative.narrativeCause?.trim() || null;
+    }
   }
 
   // ── Update ────────────────────────────────────────────────────────────────

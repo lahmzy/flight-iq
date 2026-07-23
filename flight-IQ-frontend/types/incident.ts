@@ -37,11 +37,20 @@ export interface BackendAircraft {
   imageUrl?: string | null
 }
 
-/** Aircraft shape returned in detail queries (includes narrative) */
+export interface BackendFinding {
+  id: string
+  findingNo: number
+  findingCode?: string | null
+  description?: string | null
+  category: FindingCategory
+}
+
+/** Aircraft shape returned in detail queries (includes narrative and findings) */
 export interface BackendAircraftDetail extends BackendAircraft {
   ntsbCategory?: string | null
   homebuilt?: boolean
   narrative?: BackendAircraftNarrative | null
+  findings?: BackendFinding[]
 }
 
 export interface BackendIncidentAircraft {

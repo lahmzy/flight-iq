@@ -16,6 +16,7 @@ import {
   Severity,
   InvestigationStatus,
   FlightPhase,
+  FindingCategory,
 } from 'prisma/generated/prisma/enums';
 
 // ─── Create ────────────────────────────────────────────────────────────────────
@@ -269,4 +270,9 @@ export class GetIncidentsQueryDto {
   @IsOptional()
   @Type(() => Boolean)
   hasCoordinates?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => (Array.isArray(value) ? value : value.split(',')))
+  @IsEnum(FindingCategory, { each: true })
+  findingCategory?: FindingCategory[];
 }

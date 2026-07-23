@@ -55,6 +55,7 @@ export default function InvestigationsPage() {
   if (debouncedQuery) searchParamsObj.set("q", debouncedQuery)
   if (selectedSeverities.length > 0) searchParamsObj.set("severity", selectedSeverities.join(","))
   if (selectedStatuses.length > 0) searchParamsObj.set("status", selectedStatuses.join(","))
+  if (selectedCauses.length > 0) searchParamsObj.set("findingCategory", selectedCauses.join(","))
 
   const { data, isLoading } = useGetRequest<BackendApiResponse<BackendIncidentList>>({
     url: `/incidents?${searchParamsObj.toString()}`,

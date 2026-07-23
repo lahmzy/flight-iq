@@ -15,14 +15,11 @@ import { PrismaPg } from '@prisma/adapter-pg';
  *
  * Safe to re-run: skips incidents where both fields are already populated.
  * Pass --force flag to overwrite existing values.
+ *
+ * Uses a single SQL UPDATE with JOIN — fast and atomic.
  */
 
-const CHUNK_SIZE = 200;
 const FORCE_OVERWRITE = process.argv.includes('--force');
-
-const createPrisma = (connectionString: string): PrismaClient =>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  new PrismaClient({ adapter: new PrismaPg({ connectionString }) } as any);
 
 (async () => {
   const connectionString = process.env['DATABASE_URL'];
@@ -30,116 +27,46 @@ const createPrisma = (connectionString: string): PrismaClient =>
     throw new Error('DATABASE_URL environment variable is not set.');
   }
 
-  const prisma = createPrisma(connectionString);
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) } as any);
 
   try {
-    console.log('🔗 Fetching primary aircraft links with narratives…');
+    console.log(`🔗 Denormalising narratives${FORCE_OVERWRITE ? ' (--force)' : ''}…`);
 
-    // Count total to process
-    const totalCount = await prisma.incidentAircraft.count({
-      where: {
-        isPrimary: true,
-        aircraft: {
-          narrative: {
-            isNot: null,
-          },
-        },
-      },
-    });
-    console.log(`   Found ${totalCount} primary aircraft links with narrative data.`);
+    // Build the UPDATE query.
+    // Joins incidents → incident_aircraft (isPrimary) → aircraft → aircraft_narratives.
+    const whereClause = FORCE_OVERWRITE
+      ? ''  // update all matching rows
+      : `AND (i.summary IS NULL OR i.official_cause IS NULL)`;
 
-    const counters = { updated: 0, skipped: 0, noNarrative: 0 };
-    let offset = 0;
+    const sql = `
+      UPDATE incidents i
+      SET
+        summary = COALESCE(
+          NULLIF(an.narrative_accp, ''),
+          NULLIF(an.narrative_inc, ''),
+          NULLIF(an.narrative_accf, ''),
+          i.summary
+        ),
+        official_cause = COALESCE(
+          NULLIF(an.narrative_cause, ''),
+          i.official_cause
+        )
+      FROM incident_aircraft ia
+      JOIN aircraft a ON a.id = ia.aircraft_id
+      JOIN aircraft_narratives an
+        ON an.ntsb_event_id = a.ntsb_event_id
+       AND an.ntsb_aircraft_key = a.ntsb_aircraft_key
+      WHERE ia.incident_id = i.id
+        AND ia.is_primary = true
+        ${whereClause};
+    `;
 
-    while (offset < totalCount) {
-      const links = await prisma.incidentAircraft.findMany({
-        where: {
-          isPrimary: true,
-          aircraft: {
-            narrative: {
-              isNot: null,
-            },
-          },
-        },
-        include: {
-          aircraft: {
-            include: {
-              narrative: true,
-            },
-          },
-          incident: {
-            select: {
-              id: true,
-              summary: true,
-              officialCause: true,
-            },
-          },
-        },
-        skip: offset,
-        take: CHUNK_SIZE,
-        orderBy: { incidentId: 'asc' },
-      });
+    const result = await prisma.$executeRawUnsafe(sql);
 
-      for (const link of links) {
-        const narrative = link.aircraft.narrative;
-        const incident = link.incident;
-
-        if (!narrative) {
-          counters.noNarrative++;
-          continue;
-        }
-
-        // Skip if already populated and not force-overwriting
-        const alreadyHasSummary = !!incident.summary?.trim();
-        const alreadyHasCause = !!incident.officialCause?.trim();
-        if (alreadyHasSummary && alreadyHasCause && !FORCE_OVERWRITE) {
-          counters.skipped++;
-          continue;
-        }
-
-        const newSummary =
-          narrative.narrativeAccp?.trim() ||
-          narrative.narrativeInc?.trim() ||
-          narrative.narrativeAccf?.trim() ||
-          null;
-
-        const newCause = narrative.narrativeCause?.trim() || null;
-
-        // Only update fields that are null (or all if --force)
-        const updateData: { summary?: string; officialCause?: string } = {};
-
-        if ((!alreadyHasSummary || FORCE_OVERWRITE) && newSummary) {
-          updateData.summary = newSummary;
-        }
-        if ((!alreadyHasCause || FORCE_OVERWRITE) && newCause) {
-          updateData.officialCause = newCause;
-        }
-
-        if (Object.keys(updateData).length === 0) {
-          counters.skipped++;
-          continue;
-        }
-
-        await prisma.incident.update({
-          where: { id: incident.id },
-          data: updateData,
-        });
-
-        counters.updated++;
-      }
-
-      offset += CHUNK_SIZE;
-      console.log(
-        `   ↳ ${Math.min(offset, totalCount)}/${totalCount} — updated: ${counters.updated}, skipped: ${counters.skipped}`,
-      );
-    }
-
-    console.log(
-      `\n✅ Denormalisation complete.`,
-      `\n   Updated:     ${counters.updated}`,
-      `\n   Skipped:     ${counters.skipped} (already populated)`,
-      `\n   No narrative: ${counters.noNarrative}`,
-    );
+    console.log(`\n✅ Denormalisation complete. ${result} row(s) updated.`);
+  } catch (err) {
+    console.error('❌ Denormalisation failed:', err);
+    process.exit(1);
   } finally {
     await prisma.$disconnect();
   }

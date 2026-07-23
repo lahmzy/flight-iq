@@ -11,6 +11,7 @@ import type { BackendIncidentDetail } from "@/types/incident"
 
 import { AircraftInfo } from "@/components/investigations/AircraftInfo"
 import { CasualtiesCard } from "@/components/investigations/CasualtiesCard"
+import { FindingsCard } from "@/components/investigations/FindingsCard"
 import { FlightRoute } from "@/components/investigations/FlightRoute"
 import { IncidentHeader } from "@/components/investigations/IncidentHeader"
 import { IncidentDetailSkeleton } from "@/components/investigations/IncidentDetailSkeleton"
@@ -112,6 +113,10 @@ export default function IncidentDetailPage({
         >
           <motion.div variants={fadeUp}>
             <InvestigationSummary incident={incident} narrative={narrative} />
+          </motion.div>
+
+          <motion.div variants={fadeUp}>
+            <FindingsCard incident={incident} />
           </motion.div>
 
           <motion.div variants={fadeUp}>
