@@ -13,15 +13,7 @@ import {
 import { GlassCard } from "@/components/ui/GlassCard"
 import { FadeIn } from "@/components/ui/FadeIn"
 import { SectionLabel } from "@/components/ui/SectionLabel"
-
-const radarData = [
-  { subject: "Pilot Error", A: 72, B: 68 },
-  { subject: "Weather", B: 55, A: 48 },
-  { subject: "Mechanical", A: 65, B: 71 },
-  { subject: "ATC Error", A: 20, B: 18 },
-  { subject: "Fuel", A: 25, B: 22 },
-  { subject: "Maintenance", A: 40, B: 35 },
-]
+import type { BackendCauseSeverity } from "@/types/incident"
 
 const CHART_TOOLTIP = {
   background: "rgba(10,16,37,0.97)",
@@ -33,30 +25,30 @@ const CHART_TOOLTIP = {
   color: "#94A3B8",
 }
 
-export function CauseSeverityRadar() {
+export function CauseSeverityRadar({ causeSeverity }: { causeSeverity: BackendCauseSeverity[] }) {
   return (
     <FadeIn>
       <GlassCard hover={false}>
         <SectionLabel eyebrow="Fatal vs. non-fatal" title="Cause Severity Radar" />
         <div className="mt-4">
           <ResponsiveContainer width="100%" height={260}>
-            <RadarChart data={radarData}>
+            <RadarChart data={causeSeverity}>
               <PolarGrid stroke="rgba(255,255,255,0.06)" />
               <PolarAngleAxis
                 dataKey="subject"
                 tick={{ fill: "#475569", fontFamily: "JetBrains Mono", fontSize: 10 }}
               />
               <Radar
-                name="Fatal"
-                dataKey="A"
+                name="Fatal %"
+                dataKey="fatal"
                 stroke="#EF4444"
                 fill="#EF4444"
                 fillOpacity={0.15}
                 strokeWidth={1.5}
               />
               <Radar
-                name="Non-fatal"
-                dataKey="B"
+                name="Non-fatal %"
+                dataKey="nonFatal"
                 stroke="#3B82F6"
                 fill="#3B82F6"
                 fillOpacity={0.12}

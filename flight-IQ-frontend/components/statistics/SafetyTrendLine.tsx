@@ -14,7 +14,7 @@ import {
 import { GlassCard } from "@/components/ui/GlassCard"
 import { FadeIn } from "@/components/ui/FadeIn"
 import { SectionLabel } from "@/components/ui/SectionLabel"
-import { annualStats } from "@/lib/landing-data"
+import type { BackendYearlyStat } from "@/types/incident"
 
 const CHART_TOOLTIP = {
   background: "rgba(10,16,37,0.97)",
@@ -30,18 +30,21 @@ const GRID = { stroke: "rgba(255,255,255,0.04)", strokeDasharray: "3 3" }
 
 const TICK = { fill: "#475569", fontFamily: "JetBrains Mono", fontSize: 11 }
 
-export function SafetyTrendLine() {
+export function SafetyTrendLine({ yearly }: { yearly: BackendYearlyStat[] }) {
+  const startYear = yearly[0]?.year ?? 2008
+  const endYear = yearly[yearly.length - 1]?.year ?? 2020
+
   return (
     <FadeIn>
       <GlassCard hover={false} className="mb-6">
         <SectionLabel
           eyebrow="Long-term trajectory"
-          title="Global Safety Trend 2019–2026"
-          subtitle="Total commercial aviation incidents and fatalities over the past 8 years, showing sustained improvement in non-fatal outcomes"
+          title={`Global Safety Trend ${startYear}–${endYear}`}
+          subtitle={`Total incidents, fatal events and injuries across ${endYear - startYear + 1} years of NTSB records`}
         />
         <div className="mt-6">
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={annualStats}>
+            <LineChart data={yearly}>
               <CartesianGrid {...GRID} />
               <XAxis dataKey="year" stroke="#1E293B" tick={TICK} />
               <YAxis yAxisId="left" stroke="#1E293B" tick={TICK} />

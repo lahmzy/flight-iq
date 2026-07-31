@@ -5,18 +5,10 @@ import { Globe } from "lucide-react"
 import { GlassCard } from "@/components/ui/GlassCard"
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/FadeIn"
 import { SectionLabel } from "@/components/ui/SectionLabel"
+import type { BackendRegionStat } from "@/types/incident"
 
-const regionData = [
-  { region: "North America", incidents: 1456, fatalities: 41 },
-  { region: "Europe", incidents: 1234, fatalities: 28 },
-  { region: "Asia-Pacific", incidents: 987, fatalities: 67 },
-  { region: "South America", incidents: 456, fatalities: 22 },
-  { region: "Middle East", incidents: 312, fatalities: 15 },
-  { region: "Africa", incidents: 163, fatalities: 31 },
-]
-
-export function RegionBreakdown() {
-  const maxIncidents = Math.max(...regionData.map((x) => x.incidents))
+export function RegionBreakdown({ regions }: { regions: BackendRegionStat[] }) {
+  const maxIncidents = Math.max(...regions.map((x) => x.incidents))
 
   return (
     <FadeIn>
@@ -24,7 +16,7 @@ export function RegionBreakdown() {
         <SectionLabel eyebrow="Geographic distribution" title="Incidents by Region" />
         <div className="mt-6 space-y-4">
           <StaggerContainer>
-            {regionData.map((r) => {
+            {regions.map((r) => {
               const pct = (r.incidents / maxIncidents) * 100
               const fatalRate = ((r.fatalities / r.incidents) * 100).toFixed(1)
               const rateColor =
@@ -55,7 +47,7 @@ export function RegionBreakdown() {
                           {r.incidents.toLocaleString()} incidents
                         </span>
                         <span className="mono" style={{ color: "#EF4444", fontSize: "0.72rem" }}>
-                          {r.fatalities} fatal
+                          {r.fatalities.toLocaleString()} fatal
                         </span>
                         <span
                           className="mono px-2 py-0.5 rounded"

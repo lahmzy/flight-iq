@@ -1,9 +1,7 @@
 "use client"
 
-import { useState } from "react"
-
 import { useRouter } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Loader2 } from "lucide-react"
 
 import { FadeIn } from "@/components/ui/FadeIn"
 import { AircraftCharts } from "@/components/statistics/AircraftCharts"
@@ -12,15 +10,21 @@ import { CauseAnalysis } from "@/components/statistics/CauseAnalysis"
 import { CauseSeverityRadar } from "@/components/statistics/CauseSeverityRadar"
 import { InsightCallouts } from "@/components/statistics/InsightCallouts"
 import { KpiCards } from "@/components/statistics/KpiCards"
-import { PhaseBreakdown } from "@/components/statistics/PhaseBreakdown"
+import { AircraftCategoryBreakdown } from "@/components/statistics/AircraftCategoryBreakdown"
 import { RegionBreakdown } from "@/components/statistics/RegionBreakdown"
 import { SafetyTrendLine } from "@/components/statistics/SafetyTrendLine"
 
-type Period = "2024" | "2025" | "2026"
+import { useGetRequest } from "@/hooks/useGetRequest"
+import type { BackendApiResponse } from "@/types/api"
+import type { BackendStatistics } from "@/types/incident"
 
 export default function StatisticsPage() {
-  const [period, setPeriod] = useState<Period>("2025")
   const router = useRouter()
+  const { data, isLoading } = useGetRequest<BackendApiResponse<BackendStatistics>>({
+    url: "/incidents/stats",
+    queryKey: ["incidents", "stats"],
+  })
+  const stats = data?.data
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
@@ -59,52 +63,34 @@ export default function StatisticsPage() {
               Global aviation incident data — NTSB, AAIB, ATSB, BEA, ICAO
             </p>
           </div>
-
-          <div
-            className="flex rounded-xl overflow-hidden"
-            style={{
-              border: "1px solid rgba(59,130,246,0.15)",
-              background: "rgba(10,16,37,0.8)",
-            }}
-          >
-            {(["2024", "2025", "2026"] as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className="px-5 py-2.5 mono transition-all"
-                style={{
-                  background: period === p ? "rgba(59,130,246,0.2)" : "transparent",
-                  color: period === p ? "#3B82F6" : "#475569",
-                  fontSize: "0.75rem",
-                  fontWeight: period === p ? 700 : 400,
-                  borderRight:
-                    p !== "2026" ? "1px solid rgba(59,130,246,0.1)" : "none",
-                }}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
         </div>
       </FadeIn>
 
-      <KpiCards />
+      {isLoading || !stats ? (
+        <div className="flex items-center justify-center py-32">
+          <Loader2 size={22} className="animate-spin" style={{ color: "#3B82F6" }} />
+        </div>
+      ) : (
+        <>
+          <KpiCards kpi={stats.kpi} />
 
-      <AnnualTrendChart period={period} />
+          <AnnualTrendChart yearly={stats.yearly} monthly={stats.monthly} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <CauseAnalysis />
-        <PhaseBreakdown />
-        <CauseSeverityRadar />
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <CauseAnalysis causeCategories={stats.causeCategories} />
+            <AircraftCategoryBreakdown aircraftCategories={stats.aircraftCategories} />
+            <CauseSeverityRadar causeSeverity={stats.causeSeverityRadar} />
+          </div>
 
-      <AircraftCharts />
+          <AircraftCharts aircraftTypes={stats.aircraftTypes} />
 
-      <RegionBreakdown />
+          <RegionBreakdown regions={stats.regions} />
 
-      <SafetyTrendLine />
+          <SafetyTrendLine yearly={stats.yearly} />
 
-      <InsightCallouts />
+          <InsightCallouts />
+        </>
+      )}
     </div>
   )
 }

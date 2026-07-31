@@ -3,6 +3,7 @@ import type {
   BackendIncident,
   BackendIncidentAircraft,
   BackendInvestigationStatus,
+  BackendMapMarker,
 } from "@/types/incident"
 
 function primaryAircraft(
@@ -151,4 +152,39 @@ export function mapBackendIncidentToDisplay(
 
 export function hasIncidentCoordinates(incident: Incident): boolean {
   return incident.lat !== 0 || incident.lng !== 0
+}
+
+/** Map a lightweight map marker to the display Incident shape used by the map page. */
+export function mapBackendMarkerToDisplay(marker: BackendMapMarker): Incident {
+  const aircraft = marker.aircraft?.[0]?.aircraft
+  const makeModel = compact([aircraft?.make, aircraft?.model])
+  const city = [marker.city, marker.country].filter(Boolean).join(", ")
+
+  return {
+    id: marker.slug,
+    title:
+      marker.title?.trim() ||
+      (makeModel.length > 0
+        ? `${makeModel.join(" ")} — ${marker.evType ?? "Accident"}, ${city}`
+        : `${marker.evType ?? "Accident"} — ${city}`),
+    date: marker.incidentDate,
+    location: city || "Location unavailable",
+    country: marker.country?.trim() || "Unknown",
+    aircraft: makeModel.join(" ") || "Unknown aircraft",
+    registration: aircraft?.registrationNo?.trim() || "N/A",
+    airline: aircraft?.operatorName?.trim() || "NTSB record",
+    flightNumber: "N/A",
+    severity: marker.severity,
+    status: formatStatus(marker.status),
+    causes: marker.evType ? [marker.evType] : ["NTSB"],
+    fatalities: marker.fatalities,
+    injuries: 0,
+    occupants: 0,
+    summary: "",
+    lat: marker.latitude,
+    lng: marker.longitude,
+    departureAirport: "N/A",
+    destinationAirport: "N/A",
+    phase: aircraft?.flightPhase?.trim() || "Unknown",
+  }
 }

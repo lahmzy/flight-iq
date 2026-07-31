@@ -1,37 +1,65 @@
 "use client"
 
-import { AlertTriangle, Globe, Shield, TrendingDown, TrendingUp, Users } from "lucide-react"
+import { AlertTriangle, Globe, Shield, Users } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import { GlassCard } from "@/components/ui/GlassCard"
 import { StaggerContainer, StaggerItem } from "@/components/ui/FadeIn"
+import type { BackendStatsKpi } from "@/types/incident"
 
 interface KpiCardData {
   icon: LucideIcon
   label: string
   value: string
-  delta: string
-  up: boolean
+  sub: string
   color: string
 }
 
-const kpiCards: KpiCardData[] = [
-  { icon: AlertTriangle, label: "Total Incidents", value: "4,608", delta: "-8.2%", up: false, color: "#F97316" },
-  { icon: Shield, label: "Fatal Events", value: "177", delta: "-12.3%", up: false, color: "#EF4444" },
-  { icon: Users, label: "Total Fatalities", value: "312", delta: "-18.1%", up: false, color: "#EC4899" },
-  { icon: Globe, label: "Countries", value: "178", delta: "+3", up: true, color: "#3B82F6" },
-]
+function buildKpiCards(kpi: BackendStatsKpi): KpiCardData[] {
+  return [
+    {
+      icon: AlertTriangle,
+      label: "Total Incidents",
+      value: kpi.total.toLocaleString(),
+      sub: "All-time NTSB records",
+      color: "#F97316",
+    },
+    {
+      icon: Shield,
+      label: "Fatal Events",
+      value: kpi.fatalEvents.toLocaleString(),
+      sub: `${Math.round((kpi.fatalEvents / kpi.total) * 100)}% of incidents`,
+      color: "#EF4444",
+    },
+    {
+      icon: Users,
+      label: "Total Fatalities",
+      value: kpi.totalFatalities.toLocaleString(),
+      sub: `${kpi.totalInjuries.toLocaleString()} injuries recorded`,
+      color: "#EC4899",
+    },
+    {
+      icon: Globe,
+      label: "Countries",
+      value: kpi.countries.toLocaleString(),
+      sub: "Worldwide coverage",
+      color: "#3B82F6",
+    },
+  ]
+}
 
-export function KpiCards() {
+export function KpiCards({ kpi }: { kpi: BackendStatsKpi }) {
+  const kpiCards = buildKpiCards(kpi)
+
   return (
     <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      {kpiCards.map((kpi) => {
-        const Icon = kpi.icon
+      {kpiCards.map((item) => {
+        const Icon = item.icon
         return (
-          <StaggerItem key={kpi.label}>
+          <StaggerItem key={item.label}>
             <GlassCard hover={false}>
               <div className="flex items-center gap-2 mb-3">
-                <Icon size={14} style={{ color: kpi.color }} />
+                <Icon size={14} style={{ color: item.color }} />
                 <span
                   className="mono"
                   style={{
@@ -41,7 +69,7 @@ export function KpiCards() {
                     textTransform: "uppercase",
                   }}
                 >
-                  {kpi.label}
+                  {item.label}
                 </span>
               </div>
               <div
@@ -53,16 +81,11 @@ export function KpiCards() {
                   lineHeight: 1,
                 }}
               >
-                {kpi.value}
+                {item.value}
               </div>
-              <div className="flex items-center gap-1.5 mt-2">
-                {kpi.up ? (
-                  <TrendingUp size={11} style={{ color: "#10B981" }} />
-                ) : (
-                  <TrendingDown size={11} style={{ color: "#10B981" }} />
-                )}
-                <span className="mono" style={{ color: "#10B981", fontSize: "0.65rem" }}>
-                  {kpi.delta} vs prior year
+              <div className="mt-2">
+                <span className="mono" style={{ color: "#475569", fontSize: "0.65rem" }}>
+                  {item.sub}
                 </span>
               </div>
             </GlassCard>

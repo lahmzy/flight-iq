@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   ChevronRight,
   Filter,
+  Loader2,
   MapPin,
   Plane,
   Search,
@@ -17,8 +18,11 @@ import {
 
 import { WorldSVGMap } from "@/components/map/WorldSVGMap"
 import { SeverityBadge, StatusBadge } from "@/components/ui/SeverityBadge"
-import { incidents } from "@/lib/landing-data"
-import type { Incident, Severity } from "@/lib/landing-data"
+import { useGetRequest } from "@/hooks/useGetRequest"
+import type { BackendApiResponse } from "@/types/api"
+import type { BackendMapMarker } from "@/types/incident"
+import { mapBackendMarkerToDisplay } from "@/lib/incident-display"
+import type { Severity } from "@/lib/landing-data"
 
 const severityColors: Record<Severity, string> = {
   Fatal: "#EF4444",
@@ -35,9 +39,20 @@ export default function InteractiveMapPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const router = useRouter()
 
+  const { data, isLoading } = useGetRequest<BackendApiResponse<BackendMapMarker[]>>({
+    url: "/incidents/map",
+    queryKey: ["incidents", "map"],
+    config: { params: { limit: 500 } },
+  })
+
+  const markers = useMemo(
+    () => (data?.data ?? []).map(mapBackendMarkerToDisplay),
+    [data],
+  )
+
   const filtered = useMemo(
     () =>
-      incidents.filter((inc) => {
+      markers.filter((inc) => {
         const q = query.toLowerCase()
         const matchQ =
           !q ||
@@ -48,7 +63,7 @@ export default function InteractiveMapPage() {
           !severityFilter.length || severityFilter.includes(inc.severity)
         return matchQ && matchSev
       }),
-    [query, severityFilter],
+    [markers, query, severityFilter],
   )
 
   const selectedIncident = filtered.find((i) => i.id === selectedId)
@@ -209,9 +224,14 @@ export default function InteractiveMapPage() {
                 letterSpacing: "0.08em",
               }}
             >
-              {filtered.length} INCIDENTS
+              {isLoading ? "LOADING…" : `${filtered.length} INCIDENTS`}
             </p>
-            {filtered.map((inc) => {
+            {isLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 size={20} className="animate-spin" style={{ color: "#3B82F6" }} />
+              </div>
+            ) : (
+              filtered.map((inc) => {
               const color = severityColors[inc.severity]
               const isSelected = selectedId === inc.id
               return (
@@ -269,7 +289,8 @@ export default function InteractiveMapPage() {
                   </div>
                 </div>
               )
-            })}
+            })
+            )}
           </div>
 
           <div
@@ -379,7 +400,7 @@ export default function InteractiveMapPage() {
                 </div>
               </div>
               <Link
-                href={`/investigations/${selectedIncident.id}`}
+                href={`/incident/${selectedIncident.id}`}
                 className="flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]"
                 style={{
                   background: "#3B82F6",
@@ -440,7 +461,7 @@ export default function InteractiveMapPage() {
             backdropFilter: "blur(16px)",
           }}
         >
-          {filtered.length} incidents plotted
+          {isLoading ? "Loading markers…" : `${filtered.length} incidents plotted`}
         </div>
       </div>
     </div>

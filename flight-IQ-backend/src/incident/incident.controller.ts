@@ -46,6 +46,13 @@ export class IncidentController {
     return this.incidentService.getMapMarkers(parsedLimit);
   }
 
+  // ── Statistics (must be before :slug to avoid route conflict) ──────────────
+  @Get('stats')
+  @CacheTTL(5 * 60 * 1000)
+  async getStatistics() {
+    return this.incidentService.getStatistics();
+  }
+
   // ── Detail by slug ──────────────────────────────────────────────────────
   @Get(':slug')
   @CacheTTL(5 * 60 * 1000)

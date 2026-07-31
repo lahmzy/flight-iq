@@ -1,4 +1,4 @@
-import { Copy, ExternalLink, FileDigit, Hash } from "lucide-react"
+import { Copy, ExternalLink, FileDigit } from "lucide-react"
 
 import { GlassCard } from "@/components/ui/GlassCard"
 import type { BackendIncidentDetail } from "@/types/incident"
@@ -42,15 +42,15 @@ export function IncidentMetaCard({ incident }: { incident: BackendIncidentDetail
     ? `https://data.ntsb.gov/carol-repgen/api/Aviation/ReportMain/GenerateNewestReport/${incident.ntsbNo}/true`
     : null
 
-  const rows: Array<[string, React.ReactNode] | null> = [
+  const rows = [
     incident.ntsbEventId
-      ? ["NTSB Event ID", <CopyableId key="evid" value={incident.ntsbEventId} />]
+      ? (["NTSB Event ID", <CopyableId key="evid" value={incident.ntsbEventId} />] as [string, React.ReactNode])
       : null,
     incident.ntsbNo
-      ? ["Report No.", <CopyableId key="rno" value={incident.ntsbNo} />]
+      ? (["Report No.", <CopyableId key="rno" value={incident.ntsbNo} />] as [string, React.ReactNode])
       : null,
-    incident.evType ? ["Event Type", incident.evType] : null,
-    ["Status", incident.status.replace(/([A-Z])/g, " $1").trim()],
+    incident.evType ? (["Event Type", incident.evType] as [string, React.ReactNode]) : null,
+    ["Status", incident.status.replace(/([A-Z])/g, " $1").trim()] as [string, React.ReactNode],
     [
       "Recorded",
       new Date(incident.incidentDate).toLocaleDateString("en-GB", {
@@ -58,8 +58,8 @@ export function IncidentMetaCard({ incident }: { incident: BackendIncidentDetail
         month: "short",
         year: "numeric",
       }),
-    ],
-  ].filter(Boolean)
+    ] as [string, React.ReactNode],
+  ].filter(Boolean) as Array<[string, React.ReactNode]>
 
   return (
     <GlassCard hover={false}>
@@ -79,7 +79,7 @@ export function IncidentMetaCard({ incident }: { incident: BackendIncidentDetail
 
       <div className="space-y-3">
         {rows.map((row, i) => (
-          <MetaRow key={i} label={row![0] as string} value={row![1]} />
+          <MetaRow key={i} label={row[0]} value={row[1]} />
         ))}
       </div>
 

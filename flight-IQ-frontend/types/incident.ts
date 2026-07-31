@@ -97,6 +97,7 @@ export interface BackendMapMarker {
   slug: string
   title?: string | null
   severity: BackendSeverity
+  status: BackendInvestigationStatus
   evType?: "Accident" | "Incident" | null
   incidentDate: string
   latitude: number
@@ -104,6 +105,16 @@ export interface BackendMapMarker {
   fatalities: number
   city?: string | null
   country?: string | null
+  aircraft: Array<{
+    isPrimary: boolean
+    aircraft: {
+      make?: string | null
+      model?: string | null
+      registrationNo?: string | null
+      operatorName?: string | null
+      flightPhase?: string | null
+    }
+  }>
 }
 
 // ── Incident shapes ───────────────────────────────────────────────────────────
@@ -146,3 +157,60 @@ export interface BackendIncidentDetail extends Omit<BackendIncident, "aircraft">
 }
 
 export type BackendIncidentList = PaginatedResponse<BackendIncident>
+
+// ── Statistics ────────────────────────────────────────────────────────────────
+// Shapes returned by GET /incidents/stats (all-time aggregates).
+
+export interface BackendStatsKpi {
+  total: number
+  fatalEvents: number
+  totalFatalities: number
+  totalInjuries: number
+  countries: number
+}
+
+export interface BackendYearlyStat {
+  year: number
+  total: number
+  fatal: number
+  injuries: number
+}
+
+export interface BackendMonthlyStat {
+  month: string
+  incidents: number
+}
+
+export interface BackendNameCount {
+  name: string
+  count: number
+}
+
+export interface BackendCauseSeverity {
+  subject: FindingCategory
+  fatal: number
+  nonFatal: number
+}
+
+export interface BackendAircraftTypeStat {
+  type: string
+  incidents: number
+  fatal: number
+}
+
+export interface BackendRegionStat {
+  region: string
+  incidents: number
+  fatalities: number
+}
+
+export interface BackendStatistics {
+  kpi: BackendStatsKpi
+  yearly: BackendYearlyStat[]
+  monthly: BackendMonthlyStat[]
+  causeCategories: BackendNameCount[]
+  causeSeverityRadar: BackendCauseSeverity[]
+  aircraftCategories: BackendNameCount[]
+  aircraftTypes: BackendAircraftTypeStat[]
+  regions: BackendRegionStat[]
+}

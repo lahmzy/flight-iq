@@ -212,6 +212,227 @@ export class IncidentService {
     };
   }
 
+  // ── Statistics ──────────────────────────────────────────────────
+
+  /**
+   * Aggregates the full incident dataset into the shapes consumed by the
+   * /statistics dashboard. One payload — no pagination.
+   */
+  async getStatistics() {
+    // --- KPIs ----------------------------------------------------------------
+    const [kpiRows, yearly, monthly, causeSeverity, aircraftCatRaw, aircraftTypes, countryAgg] =
+      await Promise.all([
+        this.prisma.$queryRawUnsafe<Array<{
+          total: number; fatalEvents: number; totalFatalities: number; totalInjuries: number; countries: number;
+        }>>(
+          `SELECT
+             COUNT(*)::int AS "total",
+             COUNT(*) FILTER (WHERE fatalities > 0)::int AS "fatalEvents",
+             COALESCE(SUM(fatalities), 0)::int AS "totalFatalities",
+             COALESCE(SUM(injuries), 0)::int AS "totalInjuries",
+             COUNT(DISTINCT NULLIF(TRIM(country), ''))::int AS "countries"
+           FROM incidents`,
+        ),
+
+        this.prisma.$queryRawUnsafe<Array<{ year: number; total: number; fatal: number; injuries: number }>>(
+          `SELECT
+             EXTRACT(YEAR FROM incident_date)::int AS year,
+             COUNT(*)::int AS total,
+             COUNT(*) FILTER (WHERE fatalities > 0)::int AS fatal,
+             COALESCE(SUM(injuries), 0)::int AS injuries
+           FROM incidents
+           WHERE incident_date >= '2008-01-01'
+           GROUP BY 1 ORDER BY 1`,
+        ),
+
+        this.prisma.$queryRawUnsafe<Array<{ month: number; incidents: number }>>(
+          `SELECT
+             EXTRACT(MONTH FROM incident_date)::int AS month,
+             COUNT(*)::int AS incidents
+           FROM incidents
+           WHERE incident_date >= '2008-01-01'
+           GROUP BY 1 ORDER BY 1`,
+        ),
+
+        this.prisma.$queryRawUnsafe<Array<{ category: string; fatal: number; nonFatal: number }>>(
+          `SELECT
+             f.category,
+             COUNT(DISTINCT i.id) FILTER (WHERE i.fatalities > 0)::int AS fatal,
+             COUNT(DISTINCT i.id) FILTER (WHERE i.fatalities = 0)::int AS "nonFatal"
+           FROM findings f
+           JOIN aircraft a ON a.ntsb_event_id = f.ntsb_event_id AND a.ntsb_aircraft_key = f.ntsb_aircraft_key
+           JOIN incident_aircraft ia ON ia.aircraft_id = a.id
+           JOIN incidents i ON i.id = ia.incident_id
+           GROUP BY 1`,
+        ),
+
+        this.prisma.$queryRawUnsafe<Array<{ code: string; count: number }>>(
+          `SELECT
+             UPPER(COALESCE(NULLIF(TRIM(ntsb_category), ''), 'UNK')) AS code,
+             COUNT(*)::int AS count
+           FROM aircraft
+           GROUP BY 1 ORDER BY count DESC`,
+        ),
+
+        this.prisma.$queryRawUnsafe<Array<{ type: string; incidents: number; fatal: number }>>(
+          `SELECT
+             (UPPER(COALESCE(NULLIF(TRIM(make), ''), 'UNKNOWN')) || ' ' || UPPER(COALESCE(NULLIF(TRIM(model), ''), ''))) AS type,
+             COUNT(DISTINCT ia.incident_id)::int AS incidents,
+             COUNT(DISTINCT ia.incident_id) FILTER (WHERE i.fatalities > 0)::int AS fatal
+           FROM aircraft a
+           JOIN incident_aircraft ia ON ia.aircraft_id = a.id
+           JOIN incidents i ON i.id = ia.incident_id
+           GROUP BY 1
+           ORDER BY incidents DESC
+           LIMIT 8`,
+        ),
+
+        this.prisma.$queryRawUnsafe<Array<{ country: string; incidents: number; fatalities: number }>>(
+          `SELECT
+             NULLIF(TRIM(country), '') AS country,
+             COUNT(*)::int AS incidents,
+             COALESCE(SUM(fatalities), 0)::int AS fatalities
+           FROM incidents
+           WHERE incident_date >= '2008-01-01'
+           GROUP BY 1`,
+        ),
+      ]);
+
+    // --- Cause categories (from Finding enum) --------------------------------
+    const findingGroup = await this.prisma.finding.groupBy({
+      by: ['category'],
+      _count: { _all: true },
+    });
+    const causeCategories = findingGroup
+      .map((g) => ({ name: g.category, count: g._count._all }))
+      .sort((a, b) => b.count - a.count);
+
+    // --- Cause severity radar (counts → percentage share for comparability) ---
+    const causeSeverityRadar = causeSeverity.map((row) => {
+      const total = row.fatal + row.nonFatal;
+      return {
+        subject: row.category,
+        fatal: total > 0 ? Math.round((row.fatal / total) * 100) : 0,
+        nonFatal: total > 0 ? Math.round((row.nonFatal / total) * 100) : 0,
+      };
+    });
+
+    // --- Aircraft category breakdown (ntsb_category → label) ------------------
+    const AIRCRAFT_CATEGORY_LABELS: Record<string, string> = {
+      AIR: 'Airplane',
+      HELI: 'Helicopter',
+      GLI: 'Glider',
+      BALL: 'Balloon',
+      PPAR: 'Powered Parachute',
+      WSFT: 'Weight-Shift',
+      GYRO: 'Gyrocopter',
+      ULTR: 'Ultralight',
+      UNK: 'Unknown',
+    };
+    // Merge unmapped / junk codes (e.g. numeric gross-weight leaks) into 'Other'
+    const aircraftCatBuckets: Record<string, number> = {};
+    for (const r of aircraftCatRaw) {
+      const name = AIRCRAFT_CATEGORY_LABELS[r.code] ?? 'Other';
+      aircraftCatBuckets[name] = (aircraftCatBuckets[name] ?? 0) + r.count;
+    }
+    const aircraftCategories = Object.entries(aircraftCatBuckets)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // --- Region breakdown (country → region) ----------------------------------
+    const regions = this.buildRegionBreakdown(countryAgg);
+
+    // --- Monthly distribution (all-time) --------------------------------------
+    const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthlyData = monthly.map((r) => ({
+      month: MONTH_NAMES[r.month - 1] ?? String(r.month),
+      incidents: r.incidents,
+    }));
+
+    return {
+      kpi: kpiRows[0] ?? { total: 0, fatalEvents: 0, totalFatalities: 0, totalInjuries: 0, countries: 0 },
+      yearly,
+      monthly: monthlyData,
+      causeCategories,
+      causeSeverityRadar,
+      aircraftCategories,
+      aircraftTypes,
+      regions,
+    };
+  }
+
+  // ── Region mapping helpers ────────────────────────────────────────────────
+
+  private readonly REGION_MAP: Record<string, string> = {
+    // North America
+    US: 'North America', USA: 'North America', CA: 'North America', MX: 'North America',
+    GT: 'North America', HN: 'North America', CR: 'North America', PA: 'North America',
+    DO: 'North America', BS: 'North America', JM: 'North America', DM: 'North America',
+    CU: 'North America', HT: 'North America', BZ: 'North America', NI: 'North America',
+    SV: 'North America', PR: 'North America', TT: 'North America', BB: 'North America',
+    // South America
+    BR: 'South America', CO: 'South America', PE: 'South America', EC: 'South America',
+    AR: 'South America', VE: 'South America', CL: 'South America', GY: 'South America',
+    BO: 'South America', PY: 'South America', UY: 'South America', SR: 'South America',
+    // Europe
+    GB: 'Europe', FR: 'Europe', DE: 'Europe', ES: 'Europe', IT: 'Europe', CH: 'Europe',
+    SE: 'Europe', AT: 'Europe', BE: 'Europe', PT: 'Europe', NL: 'Europe', PL: 'Europe',
+    NO: 'Europe', IS: 'Europe', HU: 'Europe', FI: 'Europe', GR: 'Europe', RO: 'Europe',
+    DK: 'Europe', UA: 'Europe', CZ: 'Europe', LV: 'Europe', HR: 'Europe', IE: 'Europe',
+    BY: 'Europe', SK: 'Europe', LT: 'Europe', EE: 'Europe', SI: 'Europe', BG: 'Europe',
+    RS: 'Europe', LU: 'Europe', MT: 'Europe', AD: 'Europe', MC: 'Europe', RU: 'Europe',
+    // Middle East
+    SA: 'Middle East', AE: 'Middle East', IL: 'Middle East', IR: 'Middle East',
+    TR: 'Middle East', EG: 'Middle East', JO: 'Middle East', KW: 'Middle East',
+    QA: 'Middle East', BH: 'Middle East', OM: 'Middle East', LB: 'Middle East',
+    SY: 'Middle East', IQ: 'Middle East', YE: 'Middle East',
+    // Africa
+    ZA: 'Africa', NG: 'Africa', KE: 'Africa', CD: 'Africa', TZ: 'Africa', NA: 'Africa',
+    ET: 'Africa', DZ: 'Africa', MA: 'Africa', TN: 'Africa', GH: 'Africa', ZW: 'Africa',
+    ZM: 'Africa', UG: 'Africa', RW: 'Africa', MZ: 'Africa', AO: 'Africa', CM: 'Africa',
+    CI: 'Africa', SN: 'Africa', ML: 'Africa', BW: 'Africa', CG: 'Africa', GA: 'Africa',
+    GM: 'Africa', GN: 'Africa', SL: 'Africa', LR: 'Africa', NE: 'Africa', TD: 'Africa',
+    SD: 'Africa', MW: 'Africa', SZ: 'Africa', LS: 'Africa', BF: 'Africa', BJ: 'Africa',
+    TG: 'Africa', MR: 'Africa', CV: 'Africa', MG: 'Africa', MU: 'Africa', SC: 'Africa',
+    // Asia-Pacific
+    AU: 'Asia-Pacific', NZ: 'Asia-Pacific', JP: 'Asia-Pacific', ID: 'Asia-Pacific',
+    IN: 'Asia-Pacific', CN: 'Asia-Pacific', KR: 'Asia-Pacific', TH: 'Asia-Pacific',
+    TW: 'Asia-Pacific', SG: 'Asia-Pacific', HK: 'Asia-Pacific', PG: 'Asia-Pacific',
+    PH: 'Asia-Pacific', MY: 'Asia-Pacific', NP: 'Asia-Pacific', AF: 'Asia-Pacific',
+    LK: 'Asia-Pacific', BD: 'Asia-Pacific', VN: 'Asia-Pacific', MM: 'Asia-Pacific',
+    KH: 'Asia-Pacific', FJ: 'Asia-Pacific', LA: 'Asia-Pacific', BT: 'Asia-Pacific',
+    TL: 'Asia-Pacific', WS: 'Asia-Pacific', TO: 'Asia-Pacific', VU: 'Asia-Pacific',
+    SB: 'Asia-Pacific', MN: 'Asia-Pacific', KZ: 'Asia-Pacific', PK: 'Asia-Pacific',
+  };
+
+  /** Normalize a raw country value to a stable region bucket. */
+  private countryToRegion(country: string | null | undefined): string {
+    if (!country) return 'Other';
+    const key = country.trim().toUpperCase();
+    return this.REGION_MAP[key] ?? 'Other';
+  }
+
+  /** Aggregate incident counts + fatalities into the six display regions. */
+  private buildRegionBreakdown(
+    rows: Array<{ country: string | null; incidents: number; fatalities: number }>,
+  ) {
+    const REGION_ORDER = ['North America', 'Europe', 'Asia-Pacific', 'South America', 'Middle East', 'Africa', 'Other'];
+    const buckets: Record<string, { incidents: number; fatalities: number }> = {};
+
+    for (const row of rows) {
+      const region = this.countryToRegion(row.country);
+      const bucket = (buckets[region] ??= { incidents: 0, fatalities: 0 });
+      bucket.incidents += row.incidents;
+      bucket.fatalities += row.fatalities;
+    }
+
+    return REGION_ORDER.filter((r) => buckets[r]).map((r) => ({
+      region: r,
+      incidents: buckets[r].incidents,
+      fatalities: buckets[r].fatalities,
+    }));
+  }
+
   // ── Map Markers ──────────────────────────────────────────────────
 
   /**
@@ -229,6 +450,7 @@ export class IncidentService {
         slug: true,
         title: true,
         severity: true,
+        status: true,
         evType: true,
         incidentDate: true,
         latitude: true,
@@ -236,6 +458,21 @@ export class IncidentService {
         fatalities: true,
         city: true,
         country: true,
+        aircraft: {
+          take: 1,
+          orderBy: { isPrimary: 'desc' },
+          select: {
+            aircraft: {
+              select: {
+                make: true,
+                model: true,
+                registrationNo: true,
+                operatorName: true,
+                flightPhase: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { incidentDate: 'desc' },
       take: limit,

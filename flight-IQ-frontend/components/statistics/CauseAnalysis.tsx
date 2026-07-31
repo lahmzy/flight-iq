@@ -5,7 +5,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 import { GlassCard } from "@/components/ui/GlassCard"
 import { FadeIn } from "@/components/ui/FadeIn"
 import { SectionLabel } from "@/components/ui/SectionLabel"
-import { causeCategories } from "@/lib/landing-data"
+import type { BackendNameCount } from "@/types/incident"
 
 const CHART_TOOLTIP = {
   background: "rgba(10,16,37,0.97)",
@@ -17,7 +17,15 @@ const CHART_TOOLTIP = {
   color: "#94A3B8",
 }
 
-export function CauseAnalysis() {
+const CAUSE_COLORS: Record<string, string> = {
+  Personnel: "#EF4444",
+  Environmental: "#3B82F6",
+  Aircraft: "#8B5CF6",
+  Organization: "#10B981",
+  Other: "#F59E0B",
+}
+
+export function CauseAnalysis({ causeCategories }: { causeCategories: BackendNameCount[] }) {
   return (
     <FadeIn>
       <GlassCard hover={false}>
@@ -36,7 +44,7 @@ export function CauseAnalysis() {
                 strokeWidth={0}
               >
                 {causeCategories.map((entry) => (
-                  <Cell key={entry.name} fill={entry.color} opacity={0.85} />
+                  <Cell key={entry.name} fill={CAUSE_COLORS[entry.name] ?? "#F59E0B"} opacity={0.85} />
                 ))}
               </Pie>
               <Tooltip contentStyle={CHART_TOOLTIP} />
@@ -45,7 +53,7 @@ export function CauseAnalysis() {
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
             {causeCategories.map((c) => (
               <div key={c.name} className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.color }} />
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: CAUSE_COLORS[c.name] ?? "#F59E0B" }} />
                 <span className="mono truncate" style={{ color: "#64748B", fontSize: "0.65rem" }}>
                   {c.name}
                 </span>
