@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react"
@@ -33,7 +33,7 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.06 } },
 }
 
-export default function InvestigationsPage() {
+function InvestigationsContent() {
   const searchParams = useSearchParams()
   const initialQ = searchParams.get("q") ?? ""
   const initialCause = searchParams.get("cause") ?? ""
@@ -256,5 +256,18 @@ export default function InvestigationsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function InvestigationsPage() {
+  return (
+    <Suspense fallback={
+      <div className="mx-auto max-w-7xl px-6 py-12 text-center">
+        <Loader2 className="mx-auto mb-4 animate-spin text-blue-500" size={32} />
+        <p style={{ color: "#64748B" }}>Loading investigations...</p>
+      </div>
+    }>
+      <InvestigationsContent />
+    </Suspense>
   )
 }
