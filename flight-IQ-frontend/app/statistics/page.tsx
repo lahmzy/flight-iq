@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 
 import { FadeIn } from "@/components/ui/FadeIn"
 import { AircraftCharts } from "@/components/statistics/AircraftCharts"
@@ -13,6 +13,7 @@ import { KpiCards } from "@/components/statistics/KpiCards"
 import { AircraftCategoryBreakdown } from "@/components/statistics/AircraftCategoryBreakdown"
 import { RegionBreakdown } from "@/components/statistics/RegionBreakdown"
 import { SafetyTrendLine } from "@/components/statistics/SafetyTrendLine"
+import { StatisticsSkeleton } from "@/components/statistics/StatisticsSkeleton"
 
 import { useGetRequest } from "@/hooks/useGetRequest"
 import type { BackendApiResponse } from "@/types/api"
@@ -67,9 +68,7 @@ export default function StatisticsPage() {
       </FadeIn>
 
       {isLoading || !stats ? (
-        <div className="flex items-center justify-center py-32">
-          <Loader2 size={22} className="animate-spin" style={{ color: "#3B82F6" }} />
-        </div>
+        <StatisticsSkeleton />
       ) : (
         <>
           <KpiCards kpi={stats.kpi} />
