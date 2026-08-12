@@ -28,7 +28,8 @@ async function bootstrap() {
         'http://localhost:3001',
         process.env.FRONTEND_URL,
       ];
-      const isAllowed = allowedOrigins.includes(origin) || origin.endsWith('.vercel.app');
+      const isAllowed =
+        allowedOrigins.includes(origin) || origin.endsWith('.vercel.app');
       if (isAllowed) {
         callback(null, true);
       } else {

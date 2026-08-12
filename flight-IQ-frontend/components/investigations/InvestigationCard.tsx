@@ -13,7 +13,7 @@ export function InvestigationCard({ incident }: { incident: Incident }) {
   return (
     <Link href={`/incident/${incident.id}`}>
       <GlassCard className="group" padding="p-5">
-        <div className="flex items-start gap-5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-4 sm:gap-5">
           <div className="min-w-0 flex-1">
             <div className="mb-2.5 flex flex-wrap items-center gap-2">
               <SeverityBadge severity={incident.severity} />
@@ -59,42 +59,44 @@ export function InvestigationCard({ incident }: { incident: Incident }) {
             </div>
           </div>
 
-          <div className="flex flex-shrink-0 flex-col items-end gap-2 pt-0.5">
-            {incident.fatalities > 0 ? (
-              <div className="text-right">
+          <div className="flex w-full sm:w-auto items-center justify-between sm:flex-col sm:items-end border-t border-slate-800/40 pt-3 sm:border-none sm:pt-0 gap-2 sm:flex-shrink-0">
+            <div>
+              {incident.fatalities > 0 ? (
+                <div className="text-left sm:text-right">
+                  <div
+                    className="mono"
+                    style={{
+                      color: "#EF4444",
+                      fontWeight: 700,
+                      fontSize: "1rem",
+                    }}
+                  >
+                    {incident.fatalities}
+                  </div>
+                  <div
+                    className="mono"
+                    style={{ color: "#475569", fontSize: "0.62rem" }}
+                  >
+                    fatalities
+                  </div>
+                </div>
+              ) : (
                 <div
-                  className="mono"
+                  className="mono rounded px-2 py-1"
                   style={{
-                    color: "#EF4444",
-                    fontWeight: 700,
-                    fontSize: "1rem",
+                    color: "#10B981",
+                    background: "rgba(16,185,129,0.1)",
+                    border: "1px solid rgba(16,185,129,0.2)",
+                    fontSize: "0.62rem",
                   }}
                 >
-                  {incident.fatalities}
+                  NO FATALITIES
                 </div>
-                <div
-                  className="mono"
-                  style={{ color: "#475569", fontSize: "0.62rem" }}
-                >
-                  fatalities
-                </div>
-              </div>
-            ) : (
-              <div
-                className="mono rounded px-2 py-1"
-                style={{
-                  color: "#10B981",
-                  background: "rgba(16,185,129,0.1)",
-                  border: "1px solid rgba(16,185,129,0.2)",
-                  fontSize: "0.62rem",
-                }}
-              >
-                NO FATALITIES
-              </div>
-            )}
+              )}
+            </div>
             <ArrowRight
               size={15}
-              className="mt-2 transition-all group-hover:translate-x-1"
+              className="transition-all group-hover:translate-x-1"
               style={{ color: "#334155" }}
             />
           </div>

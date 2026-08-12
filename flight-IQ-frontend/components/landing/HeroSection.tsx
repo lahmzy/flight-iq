@@ -56,9 +56,9 @@ export function HeroSection() {
         variants={stagger}
         className="flex flex-col items-center"
       >
-        <motion.div variants={fadeUp}>
+        <motion.div variants={fadeUp} className="max-w-full text-center">
           <div
-            className="mono mb-8 inline-flex items-center gap-2.5 rounded-full px-4 py-2"
+            className="mono mb-8 inline-flex flex-wrap justify-center items-center gap-2.5 rounded-full px-4 py-2 max-w-full"
             style={{
               background: "rgba(59,130,246,0.08)",
               border: "1px solid rgba(59,130,246,0.2)",
@@ -106,14 +106,14 @@ export function HeroSection() {
           className="relative w-full max-w-3xl"
         >
           <div
-            className="flex items-center gap-0 overflow-hidden rounded-2xl transition-all duration-300 focus-within:shadow-[0_0_50px_rgba(59,130,246,0.2)]"
+            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-0 overflow-hidden rounded-2xl transition-all duration-300 focus-within:shadow-[0_0_50px_rgba(59,130,246,0.2)]"
             style={{
               background: "rgba(10,16,37,0.9)",
               border: "1px solid rgba(59,130,246,0.18)",
               boxShadow: "0 8px 40px rgba(0,0,0,0.5)",
             }}
           >
-            <div className="flex flex-1 items-center gap-3 px-6 py-5">
+            <div className="flex flex-1 items-center gap-3 px-4 py-4 sm:px-6 sm:py-5">
               <Search
                 size={20}
                 style={{ color: "#3B82F6", flexShrink: 0 }}
@@ -129,7 +129,7 @@ export function HeroSection() {
             </div>
             <button
               type="submit"
-              className="m-1.5 flex items-center gap-2 rounded-xl px-6 py-3.5 transition-all hover:shadow-[0_0_24px_rgba(59,130,246,0.4)]"
+              className="m-1.5 mt-0 sm:mt-1.5 flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 transition-all hover:shadow-[0_0_24px_rgba(59,130,246,0.4)]"
               style={{
                 background: "#3B82F6",
                 color: "#fff",

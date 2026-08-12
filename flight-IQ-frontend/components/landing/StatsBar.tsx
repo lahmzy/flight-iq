@@ -43,7 +43,7 @@ export function StatsBar() {
   return (
     <section className="mx-auto max-w-7xl px-6 pb-24">
       <motion.div
-        className="grid grid-cols-2 gap-4 md:grid-cols-4"
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:grid-cols-4"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}

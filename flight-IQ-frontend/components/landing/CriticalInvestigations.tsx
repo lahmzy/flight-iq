@@ -90,93 +90,97 @@ export function CriticalInvestigations() {
             <motion.div key={inc.id} variants={listItem}>
               <Link href={`/incident/${inc.id}`}>
                 <GlassCard className="group" padding="p-5">
-                  <div className="flex flex-wrap items-start gap-6 md:flex-nowrap">
-                    <div className="w-24 flex-shrink-0 pt-0.5">
-                      <div
-                        className="mono"
-                        style={{
-                          color: "#3B82F6",
-                          fontSize: "0.7rem",
-                          letterSpacing: "0.08em",
-                        }}
-                      >
-                        {new Date(inc.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </div>
-                      <div
-                        className="mono"
-                        style={{ color: "#475569", fontSize: "0.65rem" }}
-                      >
-                        {new Date(inc.date).getFullYear()}
-                      </div>
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <SeverityBadge severity={inc.severity} />
-                        <StatusBadge status={inc.status} />
-                        {inc.causes.slice(0, 2).map((c) => (
-                          <CauseBadge key={c} cause={c} />
-                        ))}
-                      </div>
-                      <h3
-                        className="truncate transition-colors group-hover:text-blue-400"
-                        style={{
-                          fontFamily: "var(--font-heading)",
-                          fontWeight: 600,
-                          fontSize: "1.05rem",
-                          color: "#E2E8F0",
-                        }}
-                      >
-                        {inc.title}
-                      </h3>
-                      <p
-                        className="mono mt-1.5"
-                        style={{ color: "#475569", fontSize: "0.72rem" }}
-                      >
-                        {inc.aircraft} · {inc.airline} · {inc.location}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-shrink-0 items-center gap-6 pt-0.5">
-                      {inc.fatalities > 0 && (
-                        <div className="text-right">
-                          <div
-                            className="mono"
-                            style={{
-                              color: "#EF4444",
-                              fontSize: "0.9rem",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {inc.fatalities}
-                          </div>
-                          <div
-                            className="mono"
-                            style={{ color: "#475569", fontSize: "0.65rem" }}
-                          >
-                            fatalities
-                          </div>
-                        </div>
-                      )}
-                      <div className="text-right">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-6">
+                    <div className="flex items-start gap-4 sm:gap-6 min-w-0 flex-1">
+                      <div className="w-16 sm:w-20 flex-shrink-0 pt-0.5">
                         <div
                           className="mono"
                           style={{
-                            color: "#94A3B8",
-                            fontSize: "0.9rem",
-                            fontWeight: 600,
+                            color: "#3B82F6",
+                            fontSize: "0.7rem",
+                            letterSpacing: "0.08em",
                           }}
                         >
-                          {inc.occupants}
+                          {new Date(inc.date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
                         </div>
                         <div
                           className="mono"
                           style={{ color: "#475569", fontSize: "0.65rem" }}
                         >
-                          on board
+                          {new Date(inc.date).getFullYear()}
+                        </div>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <SeverityBadge severity={inc.severity} />
+                          <StatusBadge status={inc.status} />
+                          {inc.causes.slice(0, 2).map((c) => (
+                            <CauseBadge key={c} cause={c} />
+                          ))}
+                        </div>
+                        <h3
+                          className="truncate transition-colors group-hover:text-blue-400"
+                          style={{
+                            fontFamily: "var(--font-heading)",
+                            fontWeight: 600,
+                            fontSize: "1.05rem",
+                            color: "#E2E8F0",
+                          }}
+                        >
+                          {inc.title}
+                        </h3>
+                        <p
+                          className="mono mt-1.5"
+                          style={{ color: "#475569", fontSize: "0.72rem" }}
+                        >
+                          {inc.aircraft} · {inc.airline} · {inc.location}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex w-full md:w-auto items-center justify-between md:justify-end border-t border-slate-800/40 pt-3 md:border-t-0 md:pt-0 gap-6 md:flex-shrink-0">
+                      <div className="flex items-center gap-6">
+                        {inc.fatalities > 0 && (
+                          <div className="text-right">
+                            <div
+                              className="mono"
+                              style={{
+                                color: "#EF4444",
+                                fontSize: "0.9rem",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {inc.fatalities}
+                            </div>
+                            <div
+                              className="mono"
+                              style={{ color: "#475569", fontSize: "0.65rem" }}
+                            >
+                              fatalities
+                            </div>
+                          </div>
+                        )}
+                        <div className="text-right">
+                          <div
+                            className="mono"
+                            style={{
+                              color: "#94A3B8",
+                              fontSize: "0.9rem",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {inc.occupants}
+                          </div>
+                          <div
+                            className="mono"
+                            style={{ color: "#475569", fontSize: "0.65rem" }}
+                          >
+                            on board
+                          </div>
                         </div>
                       </div>
                       <ArrowRight

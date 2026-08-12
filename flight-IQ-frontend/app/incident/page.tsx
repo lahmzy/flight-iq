@@ -128,9 +128,10 @@ function InvestigationsContent() {
         </motion.p>
       </motion.div>
 
-      <div className="flex items-start gap-8">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-start gap-6 lg:gap-8">
         {sidebarOpen && (
           <motion.div
+            className="w-full lg:w-auto"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as const }}

@@ -180,7 +180,7 @@ export function WorldMapPreview() {
         })}
 
         <motion.div
-          className="absolute bottom-4 left-5 flex items-center gap-4"
+          className="absolute bottom-4 left-5 flex flex-wrap items-center gap-x-4 gap-y-2 pr-5"
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

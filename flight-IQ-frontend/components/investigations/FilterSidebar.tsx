@@ -113,8 +113,8 @@ export function FilterSidebar({
     selectedCauses.length
 
   return (
-    <aside className="w-64 flex-shrink-0">
-      <GlassCard hover={false} className="sticky top-24">
+    <aside className="w-full lg:w-64 lg:flex-shrink-0">
+      <GlassCard hover={false} className="static lg:sticky lg:top-24">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <SlidersHorizontal size={15} style={{ color: "#3B82F6" }} />
