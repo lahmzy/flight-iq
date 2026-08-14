@@ -18,6 +18,7 @@ import { IncidentDetailSkeleton } from "@/components/investigations/IncidentDeta
 import { IncidentMetaCard } from "@/components/investigations/IncidentMetaCard"
 import { InvestigationSummary } from "@/components/investigations/InvestigationSummary"
 import { RelatedIncidents } from "@/components/investigations/RelatedIncidents"
+import { CommentsSection } from "@/components/investigations/CommentsSection"
 import { GlassCard } from "@/components/ui/GlassCard"
 
 const fadeUp = {
@@ -129,6 +130,10 @@ export default function IncidentDetailPage({
               severity={incident.severity}
               country={incident.country}
             />
+          </motion.div>
+
+          <motion.div variants={fadeUp}>
+            <CommentsSection incidentId={incident.id} />
           </motion.div>
         </motion.div>
 

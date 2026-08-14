@@ -4,6 +4,8 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/ThemeProvider"
 import { Toaster } from "@/components/ui/toaster"
 import { QueryProvider } from "@/providers/QueryProvider"
+import { GoogleOAuthProvider } from "@react-oauth/google"
+import { AuthProvider } from "@/providers/AuthContext"
 import { cn } from "@/lib/utils";
 
 const outfit = Outfit({
@@ -41,8 +43,12 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <QueryProvider>
-            {children}
-            <Toaster />
+            <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+              <AuthProvider>
+                {children}
+                <Toaster />
+              </AuthProvider>
+            </GoogleOAuthProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>
